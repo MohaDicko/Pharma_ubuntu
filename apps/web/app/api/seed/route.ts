@@ -2,7 +2,18 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
-export async function GET() {
+export async function GET(req: Request) {
+    // 🛡️ SÉCURITÉ : Désactivé en Production
+    if (process.env.NODE_ENV === 'production') {
+        return new NextResponse(null, { status: 404 });
+    }
+
+    // 🛡️ SÉCURITÉ : Token requis même en Dev
+    const token = req.headers.get('x-seed-token');
+    if (!process.env.SEED_TOKEN || token !== process.env.SEED_TOKEN) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     try {
         console.log("🧹 Nettoyage de la base de données...");
         // Supprimer toutes les données existantes (Order matters because of FK constraints)
@@ -11,16 +22,20 @@ export async function GET() {
         await prisma.auditLog.deleteMany({});
         await prisma.batch.deleteMany({});
         await prisma.product.deleteMany({});
-        await prisma.user.deleteMany({}); // Delete users last (referenced by others) or first if no constraints? Actually Users are referenced, so delete dependents first. Correct.
+        await prisma.user.deleteMany({});
 
         console.log("👤 Création de l'Administrateur...");
-        // Créer l'utilisateur Admin par défaut
-        const hashedPassword = await bcrypt.hash("admin123", 10);
+
+        // Utiliser les variables d'environnement si disponibles, sinon défaut DEV uniquement
+        const adminEmail = process.env.ADMIN_EMAIL || "admin@ubuntu.com";
+        const adminPass = process.env.ADMIN_PASSWORD || "admin123";
+
+        const hashedPassword = await bcrypt.hash(adminPass, 10);
 
         const adminUser = await prisma.user.create({
             data: {
                 name: "Administrateur",
-                email: "admin@ubuntu.com",
+                email: adminEmail,
                 password: hashedPassword,
                 role: "ADMIN"
             }
@@ -111,10 +126,10 @@ export async function GET() {
 
                 await prisma.stockMovement.create({
                     data: {
-                        type: "IN", // Should be imported via enum if possible, keeping string "IN" works if enum matches
+                        type: "IN",
                         quantity: batchData.qty,
                         reason: "Initial Seed",
-                        userId: adminUser.id, // Link to admin
+                        userId: adminUser.id,
                         productId: product.id,
                         batchId: batch.id
                     }
@@ -124,7 +139,7 @@ export async function GET() {
 
         return NextResponse.json({
             success: true,
-            message: `${catalog.length} produits insérés. Admin créé (admin@ubuntu.com / admin123).`
+            message: `${catalog.length} produits insérés. Admin: ${adminUser.email}`
         });
 
     } catch (error) {

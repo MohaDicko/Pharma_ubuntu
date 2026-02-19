@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma'; // Utilise le singleton centralisé
+import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 
 export async function GET() {
     try {
+        const session = await auth();
+
+        // Sécurité : Accès restreint aux utilisateurs authentifiés
+        if (!session?.user) {
+            return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+        }
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 

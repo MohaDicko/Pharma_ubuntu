@@ -1,8 +1,24 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 
 export async function POST(req: Request) {
     try {
+        const session = await auth();
+
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+        }
+
+        // RBAC: Ventes autorisées pour CASHIER, PHARMACIST, ADMIN
+        const userRole = session.user.role;
+        const allowedRoles = ['CASHIER', 'PHARMACIST', 'ADMIN'];
+
+        if (!userRole || !allowedRoles.includes(userRole)) {
+            return NextResponse.json({ error: "Accès refusé: Rôle insuffisant" }, { status: 403 });
+        }
+
+        const userId = session.user.id;
         const body = await req.json();
         const { items, paymentMethod } = body;
 
@@ -19,7 +35,7 @@ export async function POST(req: Request) {
                     amount: 0,
                     paymentMethod: paymentMethod || 'CASH',
                     status: 'COMPLETED',
-                    userId: 'admin-user',
+                    userId: userId,
                 }
             });
 
@@ -52,7 +68,7 @@ export async function POST(req: Request) {
                             reason: 'Vente POS',
                             productId: item.productId,
                             batchId: batch.id,
-                            userId: 'admin-user',
+                            userId: userId,
                             transactionId: transaction.id
                         }
                     });

@@ -34,5 +34,21 @@ export const authConfig = {
             return token;
         }
     },
+    session: {
+        strategy: 'jwt',
+        maxAge: 24 * 60 * 60, // 24 hours
+    },
+    useSecureCookies: process.env.NODE_ENV === 'production',
+    cookies: {
+        sessionToken: {
+            name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.session-token`,
+            options: {
+                httpOnly: true,
+                sameSite: 'lax',
+                path: '/',
+                secure: process.env.NODE_ENV === 'production',
+            },
+        },
+    },
     providers: [], // Add providers with an empty array for now
 } satisfies NextAuthConfig;
