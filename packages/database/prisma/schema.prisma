@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Products (Référentiel Produit)
+model Product {
+  id              String   @id @default(uuid())
+  dci             String   // Dénomination Commune Internationale
+  name            String   // Nom commercial
+  category        String   // Ex: Antibiotique, Analgésique
+  minThreshold    Int      // Alerte Seuil Mini
+  
+  // Identification
+  codeMatrix      String?  @unique // DataMatrix complet
+  barCode         String?  @unique // EAN13
+
+  // Relations
+  batches         Batch[]
+  movements       StockMovement[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("products")
+}
+
+// 2. Stocks / Batches (Gestion des Lots)
+model Batch {
+  id              String   @id @default(uuid())
+  batchNumber     String   // Numéro de lot (ex: LOT-123)
+  expiryDate      DateTime // Date de péremption
+  costPrice       Decimal  // PAMP (Prix d'Achat Moyen Pondéré)
+  quantity        Int      // Stock physique actuel du lot
+
+  // Relations
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+  
+  movements       StockMovement[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([expiryDate]) // Pour l'algo FEFO
+  @@map("batches")
+}
+
+// ... (Existing models)
+
+// 0. Authentication & Authorization
+enum Role {
+  ADMIN
+  PHARMACIST // Pharmacien (Peut gérer stock + ventes)
+  CASHIER    // Caissier (Ventes uniquement)
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String    // Hashed
+  name            String
+  role            Role      @default(CASHIER)
+  
+  // Relations inverses
+  stockMovements  StockMovement[]
+  auditLogs       AuditLog[]
+  transactions    Transaction[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("users")
+}
+
+// ... et modification des autres modeles pour lier User
+
+// 3. Stock Movements (Table IMMUABLE - Ledger)
+enum MovementType {
+  IN          // Entrée (Achat)
+  OUT         // Sortie (Vente)
+  BREAKAGE    // Casse
+  RETURN      // Retour
+  ADJUSTMENT  // Inventaire
+}
+
+model StockMovement {
+  id              String       @id @default(uuid())
+  type            MovementType
+  quantity        Int          // Positif ou négatif selon le sens ? Ou toujours positif et le type définit le sens
+  reason          String?
+  
+  // Relation User (Qui a fait le mouvement)
+  userId          String       
+  user            User         @relation(fields: [userId], references: [id])
+  
+  timestamp       DateTime     @default(now())
+
+  // Relations
+  productId       String
+  product         Product      @relation(fields: [productId], references: [id])
+  
+  batchId         String
+  batch           Batch        @relation(fields: [batchId], references: [id])
+
+  transaction     Transaction?
+
+  @@map("stock_movements")
+}
+
+// 4. Financial Transactions (Lien Stock -> Finance)
+model Transaction {
+  id              String   @id @default(uuid())
+  amount          Decimal
+  type            String   // SALE, PURCHASE, REFUND
+  paymentMethod   String   // CASH, CARD, INSURANCE
+  status          String   @default("COMPLETED") // COMPLETED, CANCELLED, PENDING
+  
+  // Relation User (Qui a encaissé)
+  userId          String   @default("system") // Pour compatibilité, à migrer
+  user            User?    @relation(fields: [userId], references: [id])
+
+  // Relations
+  movementId      String?   @unique // Peut être null si transaction purement financière ? Non, lié au stock souvent.
+  movement        StockMovement? @relation(fields: [movementId], references: [id])
+  
+  createdAt       DateTime @default(now())
+
+  @@map("transactions")
+  @@index([userId])
+}
+
+// 5. Audit Log (Sécurité)
+model AuditLog {
+  id              String   @id @default(uuid())
+  action          String   // DELETE_PRODUCT, MANUAL_ADJUSTMENT
+  details         Json?
+  
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  
+  timestamp       DateTime @default(now())
+
+  @@map("audit_logs")
+}
