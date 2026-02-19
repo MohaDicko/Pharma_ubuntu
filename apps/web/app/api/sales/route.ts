@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { z } from 'zod';
+import { rateLimit } from '@/lib/rate-limit';
+
+const SaleSchema = z.object({
+    paymentMethod: z.enum(['CASH', 'CARD', 'INSURANCE', 'MOBILE_MONEY']).optional().default('CASH'),
+    items: z.array(z.object({
+        productId: z.string().uuid(),
+        quantity: z.number().int().positive(),
+        sellingPrice: z.union([z.number().nonnegative(), z.string().transform(val => parseFloat(val))]),
+    })).min(1, "Panier vide")
+});
 
 export async function POST(req: Request) {
     try {
@@ -19,12 +30,22 @@ export async function POST(req: Request) {
         }
 
         const userId = session.user.id;
-        const body = await req.json();
-        const { items, paymentMethod } = body;
 
-        if (!items || items.length === 0) {
-            return NextResponse.json({ error: "Panier vide" }, { status: 400 });
+        // Rate Limiting
+        const isAllowed = await rateLimit(`sales-${userId}`);
+        if (!isAllowed) {
+            return NextResponse.json({ error: "Trop de requêtes, veuillez patienter." }, { status: 429 });
         }
+
+        const body = await req.json();
+
+        // Validation Zod
+        const validation = SaleSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json({ error: "Données invalides", details: validation.error.format() }, { status: 400 });
+        }
+
+        const { items, paymentMethod } = validation.data;
 
         const result = await prisma.$transaction(async (tx) => {
             let totalAmount = 0;
@@ -33,7 +54,7 @@ export async function POST(req: Request) {
                 data: {
                     type: 'SALE',
                     amount: 0,
-                    paymentMethod: paymentMethod || 'CASH',
+                    paymentMethod: paymentMethod,
                     status: 'COMPLETED',
                     userId: userId,
                 }

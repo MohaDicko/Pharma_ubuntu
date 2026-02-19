@@ -2,12 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
-export async function GET(req: Request) {
-    // 🛡️ SÉCURITÉ : Désactivé en Production
-    if (process.env.NODE_ENV === 'production') {
-        return new NextResponse(null, { status: 404 });
-    }
-
+const seedHandler = async (req: Request) => {
     // 🛡️ SÉCURITÉ : Token requis même en Dev
     const token = req.headers.get('x-seed-token');
     if (!process.env.SEED_TOKEN || token !== process.env.SEED_TOKEN) {
@@ -146,4 +141,12 @@ export async function GET(req: Request) {
         console.error("Erreur Seed:", error);
         return NextResponse.json({ error: (error as Error).message }, { status: 500 });
     }
-}
+};
+
+// 🛡️ SÉCURITÉ : Désactivé au niveau structurel en Production
+// 🛡️ SÉCURITÉ : Désactivé au niveau structurel en Vercel Production (VERCEL_ENV)
+// Note: NODE_ENV est 'production' même en Preview sur Vercel, donc on utilise VERCEL_ENV.
+export const GET = process.env.VERCEL_ENV === 'production'
+    ? async () => new NextResponse(null, { status: 404 })
+    : seedHandler;
+

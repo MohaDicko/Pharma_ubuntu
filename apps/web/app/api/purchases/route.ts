@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { z } from 'zod';
+import { rateLimit } from '@/lib/rate-limit';
+
+const PurchaseSchema = z.object({
+    supplier: z.string().optional(),
+    items: z.array(z.object({
+        productId: z.string().uuid(),
+        batchNumber: z.string().min(1),
+        quantity: z.number().int().positive(),
+        costPrice: z.union([z.number().nonnegative(), z.string().transform(val => parseFloat(val))]),
+        expiryDate: z.string().refine(val => !isNaN(Date.parse(val)), "Date invalide"),
+    })).min(1, "Aucun produit réceptionné")
+});
 
 export async function POST(req: Request) {
     try {
@@ -19,12 +32,22 @@ export async function POST(req: Request) {
         }
 
         const operatorId = session.user.id;
-        const body = await req.json();
-        const { items, supplier } = body;
 
-        if (!items || items.length === 0) {
-            return NextResponse.json({ error: "Aucun produit réceptionné" }, { status: 400 });
+        // Rate Limiting
+        const isAllowed = await rateLimit(`purchases-${operatorId}`);
+        if (!isAllowed) {
+            return NextResponse.json({ error: "Trop de requêtes, veuillez patienter." }, { status: 429 });
         }
+
+        const body = await req.json();
+
+        // Validation Zod
+        const validation = PurchaseSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json({ error: "Données invalides", details: validation.error.format() }, { status: 400 });
+        }
+
+        const { items, supplier } = validation.data;
 
         const result = await prisma.$transaction(async (tx) => {
             let totalCost = 0;
@@ -48,6 +71,8 @@ export async function POST(req: Request) {
                     }
                 });
 
+                const expiryDate = new Date(item.expiryDate);
+
                 if (batch) {
                     await tx.batch.update({
                         where: { id: batch.id },
@@ -60,7 +85,7 @@ export async function POST(req: Request) {
                             batchNumber: item.batchNumber, // Ensure unique constraint doesn't fail if modeled? Currently only productId+batchNumber logical unique
                             quantity: item.quantity,
                             costPrice: item.costPrice,
-                            expiryDate: new Date(item.expiryDate)
+                            expiryDate: expiryDate
                         }
                     });
                 }
