@@ -35,7 +35,7 @@ export async function GET() {
         let totalStockValue = 0;
         let outOfStockCount = 0;
 
-        allProducts.forEach(product => {
+        allProducts.forEach((product: { batches: { quantity: number }[]; sellingPrice: unknown }) => {
             const productQty = product.batches.reduce((sum: number, b: { quantity: number }) => sum + b.quantity, 0);
             if (productQty <= 0) outOfStockCount++;
             totalStockValue += productQty * Number(product.sellingPrice);
