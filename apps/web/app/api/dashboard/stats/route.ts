@@ -22,7 +22,7 @@ export async function GET() {
             }
         });
 
-        const dailyRevenue = salesToday.reduce((sum: number, tx) => sum + Number(tx.amount), 0);
+        const dailyRevenue = salesToday.reduce((sum: number, tx: { amount: unknown }) => sum + Number(tx.amount), 0);
 
         const allProducts = await prisma.product.findMany({
             include: {
@@ -36,7 +36,7 @@ export async function GET() {
         let outOfStockCount = 0;
 
         allProducts.forEach(product => {
-            const productQty = product.batches.reduce((sum: number, b) => sum + b.quantity, 0);
+            const productQty = product.batches.reduce((sum: number, b: { quantity: number }) => sum + b.quantity, 0);
             if (productQty <= 0) outOfStockCount++;
             totalStockValue += productQty * Number(product.sellingPrice);
         });
