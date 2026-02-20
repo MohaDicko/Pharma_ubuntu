@@ -8,6 +8,31 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// 0. Authentication & Authorization
+enum Role {
+  ADMIN
+  PHARMACIST // Pharmacien (Peut gérer stock + ventes)
+  CASHIER    // Caissier (Ventes uniquement)
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String    // Hashed
+  name            String
+  role            Role      @default(CASHIER)
+  
+  // Relations inverses
+  stockMovements  StockMovement[]
+  auditLogs       AuditLog[]
+  transactions    Transaction[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("users")
+}
+
 // 1. Products (Référentiel Produit)
 model Product {
   id              String   @id @default(uuid())
@@ -53,12 +78,24 @@ model Batch {
 }
 
 // 3. Stock Movements (Table IMMUABLE - Ledger)
+enum MovementType {
+  IN          // Entrée (Achat)
+  OUT         // Sortie (Vente)
+  BREAKAGE    // Casse
+  RETURN      // Retour
+  ADJUSTMENT  // Inventaire
+}
+
 model StockMovement {
   id              String       @id @default(uuid())
-  type            String       // IN, OUT, BREAKAGE, RETURN, ADJUSTMENT
+  type            MovementType
   quantity        Int          // Positif ou négatif selon le sens
   reason          String?
-  userId          String       // Lien avec l'utilisateur qui a fait l'action
+  
+  // Relation User (Qui a fait le mouvement)
+  userId          String       
+  user            User         @relation(fields: [userId], references: [id])
+  
   timestamp       DateTime     @default(now())
 
   // Relations
@@ -80,14 +117,18 @@ model Transaction {
   amount          Decimal
   type            String   // SALE, PURCHASE, REFUND
   paymentMethod   String   // CASH, CARD, INSURANCE
-  status          String   @default("COMPLETED") // COMPLETED, PENDING, CANCELLED
+  status          String   @default("COMPLETED") // COMPLETED, CANCELLED, PENDING
   
+  // Relation User (Qui a encaissé)
+  userId          String   @default("system")
+  user            User?    @relation(fields: [userId], references: [id])
+
   // Relations
   movements       StockMovement[]
   
-  userId          String?   // Qui a fait la transaction (Caissier)
   createdAt       DateTime @default(now())
 
+  @@index([userId])
   @@map("transactions")
 }
 
@@ -95,8 +136,11 @@ model Transaction {
 model AuditLog {
   id              String   @id @default(uuid())
   action          String   // DELETE_PRODUCT, MANUAL_ADJUSTMENT
-  details         String?  // JSON stringifié
+  details         Json?
+  
   userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  
   timestamp       DateTime @default(now())
 
   @@map("audit_logs")

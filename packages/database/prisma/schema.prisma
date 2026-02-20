@@ -8,6 +8,31 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// 0. Authentication & Authorization
+enum Role {
+  ADMIN
+  PHARMACIST // Pharmacien (Peut gérer stock + ventes)
+  CASHIER    // Caissier (Ventes uniquement)
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String    // Hashed
+  name            String
+  role            Role      @default(CASHIER)
+  
+  // Relations inverses
+  stockMovements  StockMovement[]
+  auditLogs       AuditLog[]
+  transactions    Transaction[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("users")
+}
+
 // 1. Products (Référentiel Produit)
 model Product {
   id              String   @id @default(uuid())
@@ -15,6 +40,7 @@ model Product {
   name            String   // Nom commercial
   category        String   // Ex: Antibiotique, Analgésique
   minThreshold    Int      // Alerte Seuil Mini
+  sellingPrice    Decimal  @default(0) // Prix de Vente Public
   
   // Identification
   codeMatrix      String?  @unique // DataMatrix complet
@@ -51,35 +77,6 @@ model Batch {
   @@map("batches")
 }
 
-// ... (Existing models)
-
-// 0. Authentication & Authorization
-enum Role {
-  ADMIN
-  PHARMACIST // Pharmacien (Peut gérer stock + ventes)
-  CASHIER    // Caissier (Ventes uniquement)
-}
-
-model User {
-  id              String    @id @default(uuid())
-  email           String    @unique
-  password        String    // Hashed
-  name            String
-  role            Role      @default(CASHIER)
-  
-  // Relations inverses
-  stockMovements  StockMovement[]
-  auditLogs       AuditLog[]
-  transactions    Transaction[]
-
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@map("users")
-}
-
-// ... et modification des autres modeles pour lier User
-
 // 3. Stock Movements (Table IMMUABLE - Ledger)
 enum MovementType {
   IN          // Entrée (Achat)
@@ -92,7 +89,7 @@ enum MovementType {
 model StockMovement {
   id              String       @id @default(uuid())
   type            MovementType
-  quantity        Int          // Positif ou négatif selon le sens ? Ou toujours positif et le type définit le sens
+  quantity        Int          // Positif ou négatif selon le sens
   reason          String?
   
   // Relation User (Qui a fait le mouvement)
@@ -108,7 +105,8 @@ model StockMovement {
   batchId         String
   batch           Batch        @relation(fields: [batchId], references: [id])
 
-  transaction     Transaction?
+  transactionId   String?
+  transaction     Transaction? @relation(fields: [transactionId], references: [id])
 
   @@map("stock_movements")
 }
@@ -122,17 +120,16 @@ model Transaction {
   status          String   @default("COMPLETED") // COMPLETED, CANCELLED, PENDING
   
   // Relation User (Qui a encaissé)
-  userId          String   @default("system") // Pour compatibilité, à migrer
+  userId          String   @default("system")
   user            User?    @relation(fields: [userId], references: [id])
 
   // Relations
-  movementId      String?   @unique // Peut être null si transaction purement financière ? Non, lié au stock souvent.
-  movement        StockMovement? @relation(fields: [movementId], references: [id])
+  movements       StockMovement[]
   
   createdAt       DateTime @default(now())
 
-  @@map("transactions")
   @@index([userId])
+  @@map("transactions")
 }
 
 // 5. Audit Log (Sécurité)

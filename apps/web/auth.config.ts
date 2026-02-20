@@ -23,7 +23,7 @@ export const authConfig = {
                 session.user.id = token.sub;
             }
             if (token.role && session.user) {
-                session.user.role = token.role;
+                session.user.role = token.role as any; // Using any as fallback if augmentation is late
             }
             return session;
         },
