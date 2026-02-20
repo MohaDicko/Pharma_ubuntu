@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "npx prisma generate --schema=../../packages/database/schema.prisma && next build",
-    "postinstall": "npx prisma generate --schema=../../packages/database/schema.prisma",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
