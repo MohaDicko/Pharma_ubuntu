@@ -14,12 +14,12 @@ export async function GET() {
             }
         });
 
-        const result = products.map(product => {
-            const totalStock = product.batches.reduce((sum, batch) => sum + batch.quantity, 0);
+        const result = products.map((product: typeof products[number]) => {
+            const totalStock = product.batches.reduce((sum: number, batch: typeof product.batches[number]) => sum + batch.quantity, 0);
 
             // Trouver la date de péremption la plus proche
             const nextExpiryDate = product.batches.length > 0
-                ? product.batches.reduce((min, b) => b.expiryDate < min ? b.expiryDate : min, product.batches[0].expiryDate)
+                ? product.batches.reduce((min: Date, b: typeof product.batches[number]) => b.expiryDate < min ? b.expiryDate : min, product.batches[0].expiryDate)
                 : null;
 
             let status = 'OK';

@@ -12,8 +12,8 @@ export async function GET() {
             }
         });
 
-        const inventory = products.map(product => {
-            const totalQty = product.batches.reduce((sum, b) => sum + b.quantity, 0);
+        const inventory = products.map((product: typeof products[number]) => {
+            const totalQty = product.batches.reduce((sum: number, b: typeof product.batches[number]) => sum + b.quantity, 0);
             const nearestExpiry = product.batches.length > 0 ? product.batches[0].expiryDate : null;
 
             return {
