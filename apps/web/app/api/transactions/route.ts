@@ -30,7 +30,7 @@ export async function GET() {
                 amount: Number(tx.amount),
                 paymentMethod: tx.paymentMethod,
                 items,
-                products: items.map((i) => `${i.name} (${i.quantity})`).join(', '),
+                products: items.map((i: typeof items[number]) => `${i.name} (${i.quantity})`).join(', '),
                 status: tx.status || 'COMPLETED'
             };
         });
