@@ -49,7 +49,7 @@ export async function POST(req: Request) {
 
         const { items, supplier } = validation.data;
 
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx: any) => {
             let totalCost = 0;
 
             const transaction = await tx.transaction.create({

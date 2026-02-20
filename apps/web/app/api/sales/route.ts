@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
         const { items, paymentMethod } = validation.data;
 
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx: any) => {
             let totalAmount = 0;
 
             const transaction = await tx.transaction.create({
