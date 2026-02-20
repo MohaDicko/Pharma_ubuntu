@@ -15,8 +15,8 @@ export async function GET() {
             }
         });
 
-        const formatted = transactions.map((tx) => {
-            const items = tx.movements.map((m) => ({
+        const formatted = transactions.map((tx: typeof transactions[number]) => {
+            const items = tx.movements.map((m: typeof transactions[number]['movements'][number]) => ({
                 id: m.product.id,
                 name: m.product.name,
                 quantity: Math.abs(m.quantity),
