@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// 1. Products (Référentiel Produit)
+model Product {
+  id              String   @id @default(uuid())
+  dci             String   // Dénomination Commune Internationale
+  name            String   // Nom commercial
+  category        String   // Ex: Antibiotique, Analgésique
+  minThreshold    Int      // Alerte Seuil Mini
+  sellingPrice    Decimal  @default(0) // Prix de Vente Public
+  
+  // Identification
+  codeMatrix      String?  @unique // DataMatrix complet
+  barCode         String?  @unique // EAN13
+
+  // Relations
+  batches         Batch[]
+  movements       StockMovement[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("products")
+}
+
+// 2. Stocks / Batches (Gestion des Lots)
+model Batch {
+  id              String   @id @default(uuid())
+  batchNumber     String   // Numéro de lot (ex: LOT-123)
+  expiryDate      DateTime // Date de péremption
+  costPrice       Decimal  // PAMP (Prix d'Achat Moyen Pondéré)
+  quantity        Int      // Stock physique actuel du lot
+
+  // Relations
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+  
+  movements       StockMovement[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([expiryDate]) // Pour l'algo FEFO
+  @@map("batches")
+}
+
+// 3. Stock Movements (Table IMMUABLE - Ledger)
+model StockMovement {
+  id              String       @id @default(uuid())
+  type            String       // IN, OUT, BREAKAGE, RETURN, ADJUSTMENT
+  quantity        Int          // Positif ou négatif selon le sens
+  reason          String?
+  userId          String       // Lien avec l'utilisateur qui a fait l'action
+  timestamp       DateTime     @default(now())
+
+  // Relations
+  productId       String
+  product         Product      @relation(fields: [productId], references: [id])
+  
+  batchId         String
+  batch           Batch        @relation(fields: [batchId], references: [id])
+
+  transactionId   String?
+  transaction     Transaction? @relation(fields: [transactionId], references: [id])
+
+  @@map("stock_movements")
+}
+
+// 4. Financial Transactions (Lien Stock -> Finance)
+model Transaction {
+  id              String   @id @default(uuid())
+  amount          Decimal
+  type            String   // SALE, PURCHASE, REFUND
+  paymentMethod   String   // CASH, CARD, INSURANCE
+  status          String   @default("COMPLETED") // COMPLETED, PENDING, CANCELLED
+  
+  // Relations
+  movements       StockMovement[]
+  
+  userId          String?   // Qui a fait la transaction (Caissier)
+  createdAt       DateTime @default(now())
+
+  @@map("transactions")
+}
+
+// 5. Audit Log (Sécurité)
+model AuditLog {
+  id              String   @id @default(uuid())
+  action          String   // DELETE_PRODUCT, MANUAL_ADJUSTMENT
+  details         String?  // JSON stringifié
+  userId          String
+  timestamp       DateTime @default(now())
+
+  @@map("audit_logs")
+}
