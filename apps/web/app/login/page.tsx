@@ -116,9 +116,12 @@ export default function LoginPage() {
                         </Button>
                     </form>
 
-                    <div className="mt-12 pt-8 border-t border-slate-100 text-center">
-                        <p className="text-xs text-slate-400 font-medium">
+                    <div className="mt-12 pt-8 border-t border-slate-100 text-center space-y-2">
+                        <p className="text-xs text-slate-400 font-medium tracking-wider">
                             CABINET UBUNTU — SYSTÈME DE GESTION V1.0
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                            Propulsé par <a href="https://sahelmultiservices.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">Sahel Multiservices</a>
                         </p>
                     </div>
                 </div>

@@ -105,6 +105,20 @@ export function Sidebar({ className, onClick, ...props }: SidebarProps) {
                     <LogOut className="mr-2 h-4 w-4" />
                     Déconnexion
                 </Button>
+
+                <div className="mt-4 px-4 text-center">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                        Développé par
+                    </p>
+                    <a
+                        href="https://sahelmultiservices.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-bold text-primary hover:underline"
+                    >
+                        Sahel Multiservices
+                    </a>
+                </div>
             </div>
         </nav>
     )

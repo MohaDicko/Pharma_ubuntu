@@ -52,8 +52,9 @@ export function MobileNav() {
                     <Sidebar onClick={() => setIsOpen(false)} />
                 </div>
 
-                <div className="p-4 border-t bg-slate-50 text-[10px] text-center text-muted-foreground uppercase tracking-widest font-bold">
-                    © 2026 Cabinet Ubuntu
+                <div className="p-4 border-t bg-slate-50 text-[10px] text-center text-muted-foreground flex flex-col gap-1">
+                    <span className="uppercase tracking-widest font-bold">© 2026 Cabinet Ubuntu</span>
+                    <span>Par <a href="https://sahelmultiservices.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-bold">Sahel Multiservices</a></span>
                 </div>
             </aside>
 
