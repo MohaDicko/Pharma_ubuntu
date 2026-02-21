@@ -1,6 +1,6 @@
 "use client"
 
-import { useFormState, useFormStatus } from "react-dom"
+import { useActionState } from "react"
 import { authenticate } from "@/lib/actions"
 import { Loader2, Lock, AlertCircle } from "lucide-react"
 
@@ -10,18 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
 import { CabinetUbuntuLogo } from "@/components/CabinetUbuntuLogo"
 
-function LoginButton() {
-    const { pending } = useFormStatus()
-    return (
-        <Button className="w-full h-11 text-lg font-bold" disabled={pending} type="submit">
-            {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Se Connecter
-        </Button>
-    )
-}
-
 export default function LoginPage() {
-    const [errorMessage, dispatch] = useFormState(authenticate, undefined)
+    const [errorMessage, dispatch, isPending] = useActionState(authenticate, undefined)
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
@@ -68,7 +58,10 @@ export default function LoginPage() {
                             </div>
                         )}
 
-                        <LoginButton />
+                        <Button className="w-full h-11 text-lg font-bold" disabled={isPending} type="submit">
+                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Se Connecter
+                        </Button>
                     </form>
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-2 text-center text-sm text-muted-foreground">
