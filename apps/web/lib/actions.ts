@@ -8,12 +8,8 @@ export async function authenticate(
     formData: FormData,
 ) {
     try {
-        await signIn('credentials', {
-            ...Object.fromEntries(formData),
-            redirectTo: '/',
-        });
+        await signIn('credentials', formData);
     } catch (error) {
-        console.error('Authentication Error:', error);
         if (error instanceof AuthError) {
             switch (error.type) {
                 case 'CredentialsSignin':
