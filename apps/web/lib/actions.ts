@@ -8,14 +8,18 @@ export async function authenticate(
     formData: FormData,
 ) {
     try {
-        await signIn('credentials', formData);
+        await signIn('credentials', {
+            ...Object.fromEntries(formData),
+            redirectTo: '/',
+        });
     } catch (error) {
+        console.error('Authentication Error:', error);
         if (error instanceof AuthError) {
             switch (error.type) {
                 case 'CredentialsSignin':
                     return 'Identifiants invalides.';
                 default:
-                    return 'Une erreur est survenue.';
+                    return 'Une erreur est survenue pendant la connexion.';
             }
         }
         throw error;
