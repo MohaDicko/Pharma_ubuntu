@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/hooks/useAuth"
 import { Sidebar } from "@/components/Sidebar"
+import { MobileNav } from "@/components/MobileNav"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { usePathname } from "next/navigation"
 
@@ -16,8 +17,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
     // App principale avec Sidebar (mode Loading ou Connecté)
     return (
-        <div className="flex h-screen overflow-hidden">
-            {/* Sidebar Navigation */}
+        <div className="flex h-screen overflow-hidden flex-col md:flex-row">
+            <MobileNav />
+
+            {/* Sidebar Navigation (Desktop) */}
             <aside className="hidden w-64 flex-col border-r bg-card md:flex">
                 <div className="flex h-14 items-center border-b px-4">
                     <span className="text-xl font-bold text-primary">🏥 Sahel CPMS</span>

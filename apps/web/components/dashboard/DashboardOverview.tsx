@@ -72,7 +72,7 @@ export default function DashboardOverview() {
             <h2 className="text-3xl font-bold tracking-tight text-primary">Tableau de Bord Exécutif</h2>
 
             {/* KPI Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Card className="hover:shadow-md transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Chiffre d&apos;Affaires (Jour)</CardTitle>
@@ -132,9 +132,9 @@ export default function DashboardOverview() {
                 </Card>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
                 {/* Sale Chart Placeholder */}
-                <Card className="col-span-4">
+                <Card className="lg:col-span-4">
                     <CardHeader>
                         <CardTitle>Tendances Ventes vs Achats</CardTitle>
                     </CardHeader>
@@ -147,7 +147,7 @@ export default function DashboardOverview() {
                 </Card>
 
                 {/* Alertes Urgent */}
-                <Card className="col-span-3 border-orange-200">
+                <Card className="lg:col-span-3 border-orange-200">
                     <CardHeader>
                         <CardTitle className="text-orange-700 flex items-center gap-2">
                             <AlertTriangle className="h-5 w-5" />

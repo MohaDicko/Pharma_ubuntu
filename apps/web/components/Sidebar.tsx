@@ -16,9 +16,11 @@ import {
 import { Button } from "@/components/ui/button"
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface SidebarProps extends React.HTMLAttributes<HTMLElement> { }
+interface SidebarProps extends React.HTMLAttributes<HTMLElement> {
+    onClick?: () => void;
+}
 
-export function Sidebar({ className, ...props }: SidebarProps) {
+export function Sidebar({ className, onClick, ...props }: SidebarProps) {
     const pathname = usePathname()
     const { user, logout } = useAuth()
 
@@ -79,6 +81,7 @@ export function Sidebar({ className, ...props }: SidebarProps) {
                     <Link
                         key={item.href}
                         href={item.href}
+                        onClick={onClick}
                         className={cn(
                             "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors",
                             pathname === item.href
