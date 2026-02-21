@@ -17,28 +17,37 @@ async function getUser(email: string) {
 
 export const { auth, signIn, signOut, handlers } = NextAuth({
     ...authConfig,
+    secret: process.env.AUTH_SECRET,
     providers: [
         Credentials({
             async authorize(credentials) {
-                const parsedCredentials = z
-                    .object({ email: z.string().email(), password: z.string().min(6) })
-                    .safeParse(credentials);
-
-                if (parsedCredentials.success) {
-                    const { email, password } = parsedCredentials.data;
-                    console.log('Login attempt for:', email);
-                    const user = await getUser(email);
-                    if (!user) {
-                        console.log('User not found:', email);
-                        return null;
-                    }
-
-                    const passwordsMatch = await bcrypt.compare(password, user.password);
-                    console.log('Password match:', passwordsMatch);
-                    if (passwordsMatch) return user;
+                if (!credentials?.email || !credentials?.password) {
+                    return null;
                 }
 
-                console.log('Invalid credentials');
+                const email = credentials.email as string;
+                const password = credentials.password as string;
+
+                console.log('Tentative de connexion pour:', email);
+                const user = await getUser(email);
+
+                if (!user) {
+                    console.log('Utilisateur non trouvé:', email);
+                    return null;
+                }
+
+                const passwordsMatch = await bcrypt.compare(password, user.password);
+                console.log('Match mot de passe:', passwordsMatch);
+
+                if (passwordsMatch) {
+                    return {
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                        role: user.role,
+                    };
+                }
+
                 return null;
             },
         }),
