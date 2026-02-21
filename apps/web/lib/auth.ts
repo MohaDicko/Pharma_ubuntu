@@ -25,7 +25,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                     return null;
                 }
 
-                const email = credentials.email as string;
+                const email = (credentials.email as string).trim();
                 const password = credentials.password as string;
 
                 console.log('Tentative de connexion pour:', email);
