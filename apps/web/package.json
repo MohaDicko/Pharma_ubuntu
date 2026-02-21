@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "npx prisma generate && next build",
-    "postinstall": "npx prisma generate",
+    "build": "prisma generate && next build",
+    "vercel-build": "prisma generate && next build",
+    "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
