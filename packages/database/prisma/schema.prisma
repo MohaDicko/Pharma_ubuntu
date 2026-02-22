@@ -15,12 +15,18 @@ enum Role {
   CASHIER    // Caissier (Ventes uniquement)
 }
 
+enum UserStatus {
+  ACTIF
+  INACTIF
+}
+
 model User {
   id              String    @id @default(uuid())
   email           String    @unique
   password        String    // Hashed
   name            String
   role            Role      @default(CASHIER)
+  status          UserStatus @default(ACTIF)
   
   // Relations inverses
   stockMovements  StockMovement[]

@@ -22,15 +22,25 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, Plus, FileDown, Layers, Calendar, RefreshCw, Loader2, Clock } from "lucide-react"
+import { Search, Plus, FileDown, Layers, Calendar, RefreshCw, Loader2, Clock, Trash2, Edit2 } from "lucide-react"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 
-// Interface TypeScript pour l'API
 interface Product {
     id: string
     name: string
     dci: string
+    category: string
     stock: number
     minThreshold: number
+    sellingPrice: number
     status: 'OK' | 'LOW' | 'RUPTURE'
     nextExpiry: string | null
     batchesCount: number
@@ -40,9 +50,19 @@ export default function InventoryManager() {
     const [searchTerm, setSearchTerm] = useState("")
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false)
     const { downloadCsv } = useCsvExport()
 
-    // Fonction pour charger les données réelles
+    // Form state for new product
+    const [newProduct, setNewProduct] = useState({
+        name: "",
+        dci: "",
+        category: "Générique",
+        sellingPrice: "",
+        minThreshold: "10"
+    })
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
     async function fetchInventory() {
         setLoading(true)
         try {
@@ -52,237 +72,222 @@ export default function InventoryManager() {
                 setProducts(data)
             }
         } catch (error) {
-            console.error("Erreur de chargement", error)
+            console.error(error)
         } finally {
             setLoading(false)
         }
     }
 
-    // Charger au montage du composant
     useEffect(() => {
         fetchInventory()
     }, [])
 
-    // Export CSV
+    const handleAddProduct = async () => {
+        if (!newProduct.name || !newProduct.sellingPrice) return
+        setIsSubmitting(true)
+        try {
+            const res = await fetch('/api/products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newProduct)
+            })
+            if (res.ok) {
+                setIsAddModalOpen(false)
+                setNewProduct({ name: "", dci: "", category: "Générique", sellingPrice: "", minThreshold: "10" })
+                fetchInventory()
+            }
+        } catch (e) {
+            console.error(e)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
     const handleExport = () => {
         const exportData = products.map(p => ({
             Nom: p.name,
             DCI: p.dci,
             Stock: p.stock,
-            Seuil: p.minThreshold,
-            Statut: p.status,
-            Prochaine_Peremption: p.nextExpiry ? new Date(p.nextExpiry).toLocaleDateString() : 'N/A'
+            Prix: p.sellingPrice,
+            Status: p.status
         }))
         downloadCsv(exportData, `inventaire-${new Date().toISOString().split('T')[0]}.csv`)
     }
 
-    // Filtrage local
     const filteredProducts = products.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.dci.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
     const lowStockProducts = products.filter(p => p.stock <= p.minThreshold)
-
-    const expiringProducts = products.filter(p => {
-        if (!p.nextExpiry) return false;
-        const expiry = new Date(p.nextExpiry);
-        const now = new Date();
-        const diffTime = Math.abs(expiry.getTime() - now.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays < 90;
-    })
+    const expiringSoon = products.filter(p => p.nextExpiry && (new Date(p.nextExpiry).getTime() - Date.now() < 90 * 24 * 3600 * 1000))
 
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Gestion des Stocks</h2>
-                    <p className="text-sm text-muted-foreground">
-                        Vue temps réel des lots et péremptions (FEFO).
-                    </p>
+                    <h2 className="text-3xl font-bold tracking-tight text-slate-900">Gestion des Stocks</h2>
+                    <p className="text-muted-foreground mt-1">Vue temps réel des lots et du catalogue produits.</p>
                 </div>
-                <div className="flex w-full sm:w-auto gap-2">
-                    <Button variant="secondary" onClick={fetchInventory} disabled={loading} className="flex-1 sm:flex-none">
-                        <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                        <span className="hidden xs:inline">Actualiser</span>
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <Button variant="outline" onClick={fetchInventory} disabled={loading} className="flex-1 sm:flex-none">
+                        <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Actualiser
                     </Button>
-                    <Button className="flex-1 sm:flex-none">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Produit
+                    <Button onClick={() => setIsAddModalOpen(true)} className="flex-1 sm:flex-none shadow-lg">
+                        <Plus className="mr-2 h-4 w-4" /> Nouveau Produit
                     </Button>
                 </div>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-3">
-                <div className="relative w-full flex-1">
+                <div className="relative w-full flex-1 max-w-sm">
                     <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Rechercher (Nom, DCI)..."
+                        placeholder="Chercher un médicament..."
                         className="pl-9 h-11"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
                 <Button variant="outline" onClick={handleExport} disabled={products.length === 0} className="w-full sm:w-auto h-11">
-                    <FileDown className="mr-2 h-4 w-4" /> Export
+                    <FileDown className="mr-2 h-4 w-4" /> Export CSV
                 </Button>
             </div>
 
             <Tabs defaultValue="all" className="space-y-4">
-                <ScrollArea className="w-full">
-                    <TabsList className="w-full inline-flex sm:w-auto">
-                        <TabsTrigger value="all" className="flex-1 sm:flex-none">Tous ({products.length})</TabsTrigger>
-                        <TabsTrigger value="low" className="flex-1 sm:flex-none whitespace-nowrap">Alertes ({lowStockProducts.length})</TabsTrigger>
-                        <TabsTrigger value="expires" className="flex-1 sm:flex-none whitespace-nowrap">Expiration ({expiringProducts.length})</TabsTrigger>
-                    </TabsList>
-                </ScrollArea>
+                <TabsList className="bg-slate-100 p-1 rounded-lg">
+                    <TabsTrigger value="all">Tout ({products.length})</TabsTrigger>
+                    <TabsTrigger value="low" className="text-amber-600">Ruptures ({lowStockProducts.length})</TabsTrigger>
+                    <TabsTrigger value="expires" className="text-rose-600">Péremptions ({expiringSoon.length})</TabsTrigger>
+                </TabsList>
 
-                <TabsContent value="all" className="space-y-4">
-                    <Card className="border-none sm:border shadow-sm sm:shadow-md">
-                        <CardHeader className="px-0 sm:px-6">
-                            <CardTitle className="text-xl px-4 sm:px-0">Inventaire Global</CardTitle>
-                            <CardDescription className="px-4 sm:px-0">Vue agrégée par produit.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="px-0 sm:px-6">
+                <TabsContent value="all">
+                    <Card className="border-none shadow-md overflow-hidden">
+                        <CardContent className="p-0">
                             <ProductTable products={filteredProducts} loading={loading} />
                         </CardContent>
                     </Card>
                 </TabsContent>
-
-                <TabsContent value="low" className="space-y-4">
-                    <Card className="border-none sm:border shadow-sm sm:shadow-md">
-                        <CardHeader className="px-0 sm:px-6">
-                            <CardTitle className="text-xl px-4 sm:px-0">Alertes de Stock</CardTitle>
-                        </CardHeader>
-                        <CardContent className="px-0 sm:px-6">
+                <TabsContent value="low">
+                    <Card className="border-none shadow-md overflow-hidden">
+                        <CardContent className="p-0">
                             <ProductTable products={lowStockProducts} loading={loading} />
                         </CardContent>
                     </Card>
                 </TabsContent>
-
-                <TabsContent value="expires" className="space-y-4">
-                    <Card className="border-none sm:border shadow-sm sm:shadow-md">
-                        <CardHeader className="px-0 sm:px-6">
-                            <CardTitle className="text-xl px-4 sm:px-0">Péremptions Imminentes</CardTitle>
-                        </CardHeader>
-                        <CardContent className="px-0 sm:px-6">
-                            <ProductTable products={expiringProducts} loading={loading} />
+                <TabsContent value="expires">
+                    <Card className="border-none shadow-md overflow-hidden">
+                        <CardContent className="p-0">
+                            <ProductTable products={expiringSoon} loading={loading} />
                         </CardContent>
                     </Card>
                 </TabsContent>
             </Tabs>
+
+            {/* Modal Ajout Produit */}
+            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Ajouter au référentiel</DialogTitle>
+                        <DialogDescription>Créez une nouvelle fiche produit dans le catalogue.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="p-name">Nom Commercial</Label>
+                            <Input id="p-name" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="p-dci">DCI / Molécule</Label>
+                            <Input id="p-dci" value={newProduct.dci} onChange={(e) => setNewProduct({ ...newProduct, dci: e.target.value })} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="p-price">Prix de Vente (F)</Label>
+                                <Input id="p-price" type="number" value={newProduct.sellingPrice} onChange={(e) => setNewProduct({ ...newProduct, sellingPrice: e.target.value })} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="p-min">Seuil Alerte</Label>
+                                <Input id="p-min" type="number" value={newProduct.minThreshold} onChange={(e) => setNewProduct({ ...newProduct, minThreshold: e.target.value })} />
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsAddModalOpen(false)}>Annuler</Button>
+                        <Button onClick={handleAddProduct} disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                            Enregistrer
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
 
 function ProductTable({ products, loading }: { products: Product[], loading: boolean }) {
     if (loading) return (
-        <div className="rounded-md border p-10 text-center flex items-center justify-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" /> Chargement...
+        <div className="h-48 flex flex-col items-center justify-center gap-2">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="text-sm font-medium text-slate-500">Chargement de l'inventaire...</span>
         </div>
     )
 
     if (products.length === 0) return (
-        <div className="rounded-md border p-10 text-center text-muted-foreground">Aucun produit trouvé.</div>
+        <div className="h-48 flex items-center justify-center text-slate-400">
+            Aucun produit trouvé.
+        </div>
     )
 
     return (
-        <div className="w-full">
-            {/* Desktop Table View */}
-            <div className="hidden lg:block rounded-md border">
-                <Table>
-                    <TableHeader className="bg-slate-50/50">
-                        <TableRow>
-                            <TableHead className="w-[300px]">Produit / DCI</TableHead>
-                            <TableHead className="text-center">Stock Total</TableHead>
-                            <TableHead className="text-center">Seuil</TableHead>
-                            <TableHead>Statut</TableHead>
-                            <TableHead>Lots</TableHead>
-                            <TableHead>Expiration Proche</TableHead>
-                            <TableHead className="text-right">Action</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {products.map((product) => (
-                            <TableRow key={product.id} className="hover:bg-slate-50/50 transition-colors">
-                                <TableCell>
-                                    <div className="font-bold">{product.name}</div>
-                                    <div className="text-xs text-muted-foreground uppercase">{product.dci}</div>
-                                </TableCell>
-                                <TableCell className="text-center font-mono font-bold">{product.stock}</TableCell>
-                                <TableCell className="text-center text-muted-foreground font-mono">{product.minThreshold}</TableCell>
-                                <TableCell>
-                                    <Badge variant={product.status === 'OK' ? 'default' : 'destructive'}
-                                        className={product.status === 'OK' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}>
-                                        {product.status}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-1 text-sm">
-                                        <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-                                        {product.batchesCount}
+        <div className="overflow-x-auto">
+            <Table>
+                <TableHeader className="bg-slate-50/50">
+                    <TableRow>
+                        <TableHead className="pl-6">Produit</TableHead>
+                        <TableHead className="text-center">Stock</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>Prix</TableHead>
+                        <TableHead>Péremption</TableHead>
+                        <TableHead className="text-right pr-6">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {products.map((p) => (
+                        <TableRow key={p.id} className="hover:bg-slate-50/50">
+                            <TableCell className="pl-6">
+                                <div className="font-bold text-slate-900">{p.name}</div>
+                                <div className="text-[10px] text-muted-foreground uppercase font-medium">{p.dci}</div>
+                            </TableCell>
+                            <TableCell className="text-center font-mono font-bold">{p.stock}</TableCell>
+                            <TableCell>
+                                <Badge variant={p.status === 'OK' ? 'default' : 'destructive'}
+                                    className={p.status === 'OK' ? 'bg-emerald-600' : ''}>
+                                    {p.status}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="font-bold">{p.sellingPrice.toLocaleString()} F</TableCell>
+                            <TableCell>
+                                {p.nextExpiry ? (
+                                    <div className="flex items-center text-xs font-bold text-slate-600">
+                                        <Calendar className="h-3 w-3 mr-1" />
+                                        {new Date(p.nextExpiry).toLocaleDateString()}
                                     </div>
-                                </TableCell>
-                                <TableCell>
-                                    {product.nextExpiry ? (
-                                        <div className={`flex items-center text-sm font-medium ${new Date(product.nextExpiry).getTime() - new Date().getTime() < 30 * 24 * 60 * 60 * 1000
-                                            ? 'text-rose-600' : 'text-amber-600'
-                                            }`}>
-                                            <Calendar className="mr-2 h-3.5 w-3.5" />
-                                            {new Date(product.nextExpiry).toLocaleDateString()}
-                                        </div>
-                                    ) : '-'}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="ghost" size="sm">Détails</Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
-
-            {/* Mobile/Tablet Card View */}
-            <div className="lg:hidden space-y-3 px-4 sm:px-0 pb-10">
-                {products.map((product) => (
-                    <div key={product.id} className="bg-white rounded-xl border p-4 shadow-sm active:scale-[0.98] transition-all">
-                        <div className="flex justify-between items-start mb-3">
-                            <div>
-                                <h3 className="font-bold text-slate-900">{product.name}</h3>
-                                <p className="text-[10px] text-muted-foreground uppercase font-semibold">{product.dci}</p>
-                            </div>
-                            <Badge variant={product.status === 'OK' ? 'default' : 'destructive'}
-                                className={product.status === 'OK' ? 'bg-emerald-600' : ''}>
-                                {product.status}
-                            </Badge>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 py-3 border-y border-slate-50 my-3">
-                            <div>
-                                <p className="text-[10px] text-muted-foreground uppercase mb-1">Stock</p>
-                                <p className="text-lg font-black text-primary">{product.stock}</p>
-                            </div>
-                            <div>
-                                <p className="text-[10px] text-muted-foreground uppercase mb-1">Seuil</p>
-                                <p className="text-lg font-bold text-slate-500">{product.minThreshold}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs pt-1">
-                            {product.nextExpiry ? (
-                                <div className="flex items-center text-rose-600 font-bold bg-rose-50 px-2 py-1 rounded">
-                                    <Clock className="mr-1.5 h-3 w-3" />
-                                    {new Date(product.nextExpiry).toLocaleDateString()}
+                                ) : '-'}
+                            </TableCell>
+                            <TableCell className="text-right pr-6">
+                                <div className="flex justify-end gap-2">
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-primary">
+                                        <Edit2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-rose-500">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
                                 </div>
-                            ) : <div></div>}
-                            <Button variant="outline" size="sm" className="h-8 rounded-lg font-bold text-primary border-primary/20 hover:bg-primary/5">
-                                Gérer les lots
-                            </Button>
-                        </div>
-                    </div>
-                ))}
-            </div>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
         </div>
     )
 }

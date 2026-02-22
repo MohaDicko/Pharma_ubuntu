@@ -36,6 +36,11 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                     return null;
                 }
 
+                if ((user as any).status === 'INACTIF') {
+                    console.log('Compte désactivé:', email);
+                    return null;
+                }
+
                 const passwordsMatch = await bcrypt.compare(password, user.password);
                 console.log('Match mot de passe:', passwordsMatch);
 
