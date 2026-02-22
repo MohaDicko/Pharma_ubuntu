@@ -11,7 +11,8 @@ import {
     Users,
     CreditCard,
     ClipboardList,
-    LogOut
+    LogOut,
+    ShieldCheck
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -30,25 +31,25 @@ export function Sidebar({ className, onClick, ...props }: SidebarProps) {
             title: "Tableau de Bord",
             href: "/",
             icon: BarChart4,
-            roles: ['ADMIN', 'PHARMACIST', 'STOCK_MANAGER']
+            roles: ['ADMIN', 'PHARMACIST', 'CASHIER']
         },
         {
             title: "Point de Vente",
             href: "/pos",
             icon: CreditCard,
-            roles: ['ADMIN', 'PHARMACIST']
+            roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] // Le caissier encaisse !
         },
         {
             title: "Stocks & Lots",
             href: "/inventory",
             icon: Package,
-            roles: ['ADMIN', 'PHARMACIST', 'STOCK_MANAGER'] // Pharmacien voit stock mais ne modifie pas tout
+            roles: ['ADMIN', 'PHARMACIST']
         },
         {
             title: "Transactions",
             href: "/transactions",
             icon: ClipboardList,
-            roles: ['ADMIN'] // Seul le patron voit l'argent
+            roles: ['ADMIN']
         },
         {
             title: "Utilisateurs",
@@ -59,7 +60,7 @@ export function Sidebar({ className, onClick, ...props }: SidebarProps) {
         {
             title: "Sécurité & Audit",
             href: "/audit",
-            icon: Users, // Changed icon to be more relevant or I could use Shield if I imported it
+            icon: ShieldCheck,
             roles: ['ADMIN']
         },
         {
@@ -72,7 +73,7 @@ export function Sidebar({ className, onClick, ...props }: SidebarProps) {
             title: "Paramètres",
             href: "/settings",
             icon: Settings,
-            roles: ['ADMIN']
+            roles: ['ADMIN', 'PHARMACIST', 'CASHIER']
         },
     ]
 
