@@ -60,14 +60,15 @@ export default function LoginPage() {
 
                     <form action={dispatch} className="space-y-6">
                         <div className="space-y-2">
-                            <Label htmlFor="email" className="text-slate-700 font-medium">Email professionnel</Label>
+                            <Label htmlFor="email" className="text-slate-700 font-medium">Identifiant</Label>
                             <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                 <Input
                                     id="email"
                                     name="email"
-                                    type="email"
-                                    placeholder="safi@ubuntu.com"
+                                    type="text"
+                                    autoComplete="username"
+                                    placeholder="email ou identifiant"
                                     className="pl-11 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all rounded-xl"
                                     required
                                 />
@@ -85,10 +86,10 @@ export default function LoginPage() {
                                     id="password"
                                     name="password"
                                     type="password"
+                                    autoComplete="current-password"
                                     placeholder="••••••••"
                                     className="pl-11 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all rounded-xl"
                                     required
-                                    minLength={6}
                                 />
                             </div>
                         </div>
