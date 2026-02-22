@@ -20,6 +20,7 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { generateInventoryPDF } from "@/lib/pdf-reports"
+import { PageShell } from "@/components/PageShell"
 
 interface InventoryReport {
     summary: {
@@ -64,17 +65,17 @@ export default function ReportsPage() {
     if (!report) return <div>Accès refusé ou erreur.</div>
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700">
+        <PageShell>
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
-                        <TrendingUp className="h-8 w-8 text-primary" />
-                        Analyses & Rapports
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+                        <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+                        Analyses &amp; Rapports
                     </h1>
-                    <p className="text-slate-500 mt-1">Vue d'ensemble de la santé financière et logistique de la pharmacie.</p>
+                    <p className="text-slate-500 mt-1 text-sm">Vue d&apos;ensemble de la santé financière et logistique.</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                     <Button variant="outline" className="gap-2 shadow-sm">
                         <Download className="h-4 w-4" /> Export CSV
                     </Button>
@@ -88,7 +89,7 @@ export default function ReportsPage() {
             </div>
 
             {/* Main KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <Card className="border-l-4 border-l-blue-600 shadow-md">
                     <CardHeader className="pb-2">
                         <CardDescription className="text-xs uppercase font-bold tracking-wider">Valeur Totale Stock</CardDescription>
@@ -196,6 +197,6 @@ export default function ReportsPage() {
                     </CardContent>
                 </Card>
             </div>
-        </div>
+        </PageShell>
     )
 }

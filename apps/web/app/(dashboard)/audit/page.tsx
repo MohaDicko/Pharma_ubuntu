@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
+import { PageShell } from "@/components/PageShell"
 
 interface AuditEntry {
     id: string;
@@ -58,20 +59,20 @@ export default function AuditPage() {
     if (loading) return <div className="p-10 text-center"><Loader2 className="animate-spin mx-auto h-10 w-10 text-primary" /></div>
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center">
+        <PageShell>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                        <Shield className="h-8 w-8 text-primary" />
-                        Journal d'Audit & Sécurité
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+                        <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+                        Journal d&apos;Audit
                     </h1>
-                    <p className="text-slate-500">Traçabilité complète des actions effectuées sur le système.</p>
+                    <p className="text-slate-500 text-sm mt-1">Traçabilité complète des actions.</p>
                 </div>
-                <div className="relative w-72">
+                <div className="relative w-full sm:w-72">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Chercher une action ou un utilisateur..."
-                        className="pl-10"
+                        placeholder="Chercher une action..."
+                        className="pl-10 w-full"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -119,6 +120,6 @@ export default function AuditPage() {
                     </ScrollArea>
                 </CardContent>
             </Card>
-        </div>
+        </PageShell>
     )
 }

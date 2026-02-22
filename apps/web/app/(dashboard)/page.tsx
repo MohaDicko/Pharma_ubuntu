@@ -1,11 +1,12 @@
 "use client"
 
 import DashboardOverview from "@/components/dashboard/DashboardOverview"
+import { PageShell } from "@/components/PageShell"
 
 export default function DashboardPage() {
     return (
-        <div className="flex-1 p-8 pt-6">
+        <PageShell>
             <DashboardOverview />
-        </div>
+        </PageShell>
     )
 }

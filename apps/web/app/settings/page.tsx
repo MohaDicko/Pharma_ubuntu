@@ -7,10 +7,11 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Printer, Store, Lock, Save } from "lucide-react"
+import { PageShell } from "@/components/PageShell"
 
 export default function SettingsPage() {
     return (
-        <div className="space-y-6 pb-10">
+        <PageShell>
             <div className="space-y-0.5">
                 <h2 className="text-2xl font-bold tracking-tight">Paramètres</h2>
                 <p className="text-muted-foreground">
@@ -20,7 +21,7 @@ export default function SettingsPage() {
             <Separator className="my-6" />
 
             <Tabs defaultValue="general" className="space-y-4">
-                <TabsList>
+                <TabsList className="w-full sm:w-auto overflow-x-auto flex">
                     <TabsTrigger value="general" className="flex items-center gap-2">
                         <Store className="h-4 w-4" /> Général
                     </TabsTrigger>
@@ -134,6 +135,6 @@ export default function SettingsPage() {
                 </TabsContent>
 
             </Tabs>
-        </div>
+        </PageShell>
     )
 }

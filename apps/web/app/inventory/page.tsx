@@ -1,11 +1,12 @@
 "use client"
 
 import InventoryManager from "@/components/inventory/InventoryManager"
+import { PageShell } from "@/components/PageShell"
 
 export default function InventoryPage() {
     return (
-        <div className="flex-1 p-8 pt-6">
+        <PageShell>
             <InventoryManager />
-        </div>
+        </PageShell>
     )
 }

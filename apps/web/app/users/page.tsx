@@ -24,6 +24,7 @@ import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { toast } from "@/components/ui/toast"
+import { PageShell } from "@/components/PageShell"
 
 interface TeamMember {
     id: string
@@ -209,7 +210,7 @@ export default function UsersPage() {
         ), [users, searchTerm])
 
     return (
-        <div className="space-y-6 pb-10">
+        <PageShell>
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -360,6 +361,6 @@ export default function UsersPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </PageShell>
     )
 }

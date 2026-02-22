@@ -9,7 +9,6 @@ import { usePathname } from "next/navigation"
 import { ToastProvider } from "@/components/ui/toast"
 import { CabinetUbuntuLogo } from "@/components/CabinetUbuntuLogo"
 
-// Écran de chargement partagé — évite la page blanche
 function LoadingScreen({ message = "Initialisation..." }: { message?: string }) {
     return (
         <div className="flex h-screen w-full items-center justify-center bg-slate-50">
@@ -33,7 +32,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     const { user, loading } = useAuth()
     const pathname = usePathname()
 
-    // Routes publiques sans Sidebar
     if (pathname === '/login') {
         return (
             <>
@@ -43,59 +41,53 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         )
     }
 
-    // Chargement de la session : spinner au lieu de page blanche
-    if (loading) {
-        return <LoadingScreen message="Chargement de votre session..." />
-    }
+    if (loading) return <LoadingScreen message="Chargement de votre session..." />
+    if (!user) return <LoadingScreen message="Vérification des accès..." />
 
-    // Pas encore de user (pendant la redirection middleware) :
-    // on affiche le spinner au lieu de null (page blanche)
-    if (!user) {
-        return <LoadingScreen message="Vérification des accès..." />
-    }
-
-    // App principale avec Sidebar
     return (
         <div className="flex flex-col h-screen overflow-hidden animate-in fade-in duration-300">
             <OfflineBanner />
-            <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
-                <MobileNav />
+            <div className="flex flex-1 overflow-hidden">
 
-                {/* Sidebar Navigation (Desktop) */}
-                <aside className="hidden w-64 flex-col border-r bg-card md:flex">
+                {/* ─── Sidebar Desktop ─────────────────────────────────── */}
+                <aside className="hidden md:flex w-56 lg:w-64 flex-col border-r bg-card shrink-0">
                     <div className="flex h-14 items-center border-b px-4 gap-3">
-                        <div className="bg-primary/10 p-1.5 rounded-lg">
+                        <div className="bg-primary/10 p-1.5 rounded-lg shrink-0">
                             <CabinetUbuntuLogo className="h-5 w-5 text-primary" />
                         </div>
-                        <span className="text-base font-bold text-primary">Sahel CPMS</span>
+                        <span className="text-sm lg:text-base font-bold text-primary truncate">Sahel CPMS</span>
                     </div>
-                    <ScrollArea className="flex-1 py-4">
-                        <div className="px-3 py-2">
-                            <h2 className="mb-2 px-4 text-xs font-semibold tracking-tight text-muted-foreground uppercase">
+                    <ScrollArea className="flex-1 py-3">
+                        <div className="px-2 lg:px-3">
+                            <p className="mb-2 px-3 text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
                                 Navigation
-                            </h2>
+                            </p>
                             <Sidebar />
                         </div>
                     </ScrollArea>
-
-                    {/* User Profile */}
-                    <div className="mt-auto border-t p-4">
+                    <div className="mt-auto border-t p-3 lg:p-4">
                         <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold uppercase ring-2 ring-primary/10">
+                            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black uppercase ring-2 ring-primary/10 shrink-0 text-sm">
                                 {user.name.charAt(0)}
                             </div>
-                            <div className="text-sm overflow-hidden">
-                                <p className="font-medium truncate max-w-[140px]" title={user.name}>{user.name}</p>
-                                <p className="text-xs text-muted-foreground font-semibold uppercase">{user.role}</p>
+                            <div className="text-sm overflow-hidden min-w-0">
+                                <p className="font-semibold truncate text-slate-900" title={user.name}>{user.name}</p>
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{user.role}</p>
                             </div>
                         </div>
                     </div>
                 </aside>
 
-                {/* Main Content Area */}
-                <main className="flex-1 overflow-y-auto bg-slate-50/50">
-                    {children}
-                </main>
+                {/* ─── Contenu Principal ────────────────────────────────── */}
+                <div className="flex flex-col flex-1 overflow-hidden">
+                    {/* Mobile Nav Header */}
+                    <MobileNav />
+
+                    {/* Page content — scroll interne */}
+                    <main className="flex-1 overflow-y-auto bg-slate-50/50">
+                        {children}
+                    </main>
+                </div>
             </div>
             <ToastProvider />
         </div>
