@@ -1,8 +1,10 @@
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import { format } from 'date-fns';
 
-export const generateInventoryPDF = (report: any) => {
+export const generateInventoryPDF = async (report: any) => {
+    // Import dynamique pour éviter les erreurs SSR (window is not defined)
+    const { default: jsPDF } = await import('jspdf');
+    await import('jspdf-autotable');
+
     const doc = new jsPDF() as any;
     const dateStr = format(new Date(), 'dd/MM/yyyy HH:mm');
 
@@ -34,7 +36,7 @@ export const generateInventoryPDF = (report: any) => {
             ['Lots critiques (peremption < 6 mois)', `${report.summary.expiringCount} lots`]
         ],
         theme: 'striped',
-        headStyles: { fillStyle: [71, 85, 105] }
+        headStyles: { fillColor: [71, 85, 105] }
     });
 
     // 3. Table des Ruptures

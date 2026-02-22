@@ -79,7 +79,7 @@ export default function ReportsPage() {
                         <Download className="h-4 w-4" /> Export CSV
                     </Button>
                     <Button
-                        onClick={() => report && generateInventoryPDF(report)}
+                        onClick={async () => report && await generateInventoryPDF(report)}
                         className="gap-2 shadow-lg hover:translate-y-[-2px] transition-transform"
                     >
                         <FileText className="h-4 w-4" /> Rapport PDF Complet

@@ -1,3 +1,5 @@
+"use client"
+
 import { AuthProvider } from "@/hooks/useAuth"
 import { SessionProvider } from "next-auth/react"
 

@@ -33,12 +33,14 @@ interface DashboardStats {
 export default function DashboardOverview() {
     const [stats, setStats] = useState<DashboardStats | null>(null)
     const [loading, setLoading] = useState(true)
+    const [isMounted, setIsMounted] = useState(false)
 
     useEffect(() => {
+        setIsMounted(true)
         async function fetchStats() {
             setLoading(true)
             try {
-                const res = await fetch('/api/dashboard/stats') // Votre API magique
+                const res = await fetch('/api/dashboard/stats')
                 if (res.ok) {
                     const data = await res.json()
                     setStats(data)
@@ -52,9 +54,9 @@ export default function DashboardOverview() {
         fetchStats()
     }, [])
 
-    if (loading) {
+    if (!isMounted || loading) {
         return (
-            <div className="flex h-screen items-center justify-center space-x-2">
+            <div className="flex h-[60vh] items-center justify-center space-x-2">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <span className="text-xl font-medium text-muted-foreground">Chargement du Tableau de Bord...</span>
             </div>
