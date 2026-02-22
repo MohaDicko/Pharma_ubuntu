@@ -4,9 +4,11 @@ import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
+// ─── GET : Liste tous les produits avec stock calculé ──────────────────────
 export async function GET() {
     try {
         const products = await prisma.product.findMany({
+            orderBy: { name: 'asc' },
             include: {
                 batches: {
                     where: {
@@ -19,8 +21,6 @@ export async function GET() {
 
         const result = products.map((product) => {
             const totalStock = product.batches.reduce((sum, batch) => sum + batch.quantity, 0);
-
-            // Trouver la date de péremption la plus proche
             const nextExpiryDate = product.batches.length > 0
                 ? product.batches.reduce((min, b) => b.expiryDate < min ? b.expiryDate : min, product.batches[0].expiryDate)
                 : null;
@@ -33,7 +33,7 @@ export async function GET() {
                 ...product,
                 stock: totalStock,
                 sellingPrice: Number(product.sellingPrice),
-                status: status,
+                status,
                 nextExpiry: nextExpiryDate ? nextExpiryDate.toISOString() : null,
                 batchesCount: product.batches.length
             };
@@ -41,11 +41,12 @@ export async function GET() {
 
         return NextResponse.json(result);
     } catch (error) {
-        console.error("Products API Error:", error);
+        console.error("Products GET Error:", error);
         return NextResponse.json({ error: (error as Error).message }, { status: 500 });
     }
 }
 
+// ─── POST : Créer un produit + son lot de stock initial ────────────────────
 export async function POST(req: Request) {
     try {
         const session = await auth();
@@ -54,23 +55,49 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { dci, name, sellingPrice, minThreshold, category } = body;
+        const {
+            name,
+            dci,
+            category,
+            sellingPrice,
+            minThreshold,
+            // Lot initial (optionnel mais recommandé)
+            initialQuantity,
+            costPrice,
+            expiryDate,
+            batchNumber
+        } = body;
 
-        if (!name || !sellingPrice || !minThreshold) {
-            return NextResponse.json({ error: "Données incomplètes (Nom, Prix et Seuil requis)" }, { status: 400 });
+        if (!name || !sellingPrice) {
+            return NextResponse.json({ error: "Nom et Prix de vente sont requis" }, { status: 400 });
         }
 
+        // Créer le produit + lot initial en une seule transaction atomique
         const newProduct = await prisma.product.create({
             data: {
-                dci: dci || '',
                 name,
+                dci: dci || '',
+                category: category || 'Divers',
                 sellingPrice: Number(sellingPrice),
-                minThreshold: Number(minThreshold),
-                category: category || 'Divers'
+                minThreshold: Number(minThreshold) || 5,
+                // Créer le lot initial si quantité fournie
+                ...(initialQuantity && Number(initialQuantity) > 0 && {
+                    batches: {
+                        create: {
+                            batchNumber: batchNumber || `LOT-${Date.now()}`,
+                            quantity: Number(initialQuantity),
+                            costPrice: Number(costPrice) || Number(sellingPrice) * 0.7,
+                            expiryDate: expiryDate ? new Date(expiryDate) : new Date(Date.now() + 365 * 24 * 3600 * 1000) // +1 an par défaut
+                        }
+                    }
+                })
+            },
+            include: {
+                batches: true
             }
         });
 
-        return NextResponse.json(newProduct);
+        return NextResponse.json(newProduct, { status: 201 });
     } catch (error) {
         console.error("Product POST Error:", error);
         return NextResponse.json({ error: "Erreur lors de la création du produit" }, { status: 500 });
