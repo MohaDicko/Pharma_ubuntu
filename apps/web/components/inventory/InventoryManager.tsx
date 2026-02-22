@@ -32,6 +32,7 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { toast } from "@/components/ui/toast"
 
 interface Product {
     id: string
@@ -172,9 +173,14 @@ export default function InventoryManager() {
                 setIsAddModalOpen(false)
                 setNewProduct({ name: "", dci: "", category: "Générique", sellingPrice: "", minThreshold: "10" })
                 fetchInventory()
+                toast("Produit ajouté au catalogue !", 'success')
+            } else {
+                const err = await res.json()
+                toast(err.error || "Erreur lors de l'ajout", 'error')
             }
         } catch (e) {
             console.error(e)
+            toast("Erreur réseau", 'error')
         } finally {
             setIsSubmitting(false)
         }

@@ -6,6 +6,7 @@ import { MobileNav } from "@/components/MobileNav"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { OfflineBanner } from "@/components/OfflineBanner"
 import { usePathname } from "next/navigation"
+import { ToastProvider } from "@/components/ui/toast"
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
     const { user, loading } = useAuth()
@@ -73,6 +74,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                     {children}
                 </main>
             </div>
+            <ToastProvider />
         </div>
     )
 }

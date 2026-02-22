@@ -9,7 +9,7 @@ import { Card, CardContent, CardTitle, CardHeader } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-// Tabs removed as they are unused
+import { toast } from "@/components/ui/toast"
 
 interface Product {
     id: string
@@ -65,7 +65,7 @@ export default function POSTerminal() {
     // Ajouter au panier
     const addToCart = (product: Product) => {
         if (product.stock <= 0) {
-            alert("Rupture de stock !")
+            toast("Rupture de stock !", 'warning')
             return
         }
 
@@ -73,7 +73,7 @@ export default function POSTerminal() {
             const existing = currentCart.find(item => item.id === product.id)
             if (existing) {
                 if (existing.quantity >= product.stock) {
-                    alert("Stock insuffisant pour ajouter plus !")
+                    toast("Stock insuffisant pour ajouter plus !", 'warning')
                     return currentCart
                 }
                 return currentCart.map(item =>
@@ -145,7 +145,7 @@ export default function POSTerminal() {
             setTimeout(() => setLastTransactionId(null), 5000)
 
         } catch (error) {
-            alert("Erreur lors de la vente: " + (error as Error).message)
+            toast("Erreur lors de la vente: " + (error as Error).message, 'error')
         } finally {
             setIsCheckingOut(false)
         }
