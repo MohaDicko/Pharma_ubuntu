@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, memo } from "react"
 import {
     Table,
     TableBody,
@@ -54,6 +54,78 @@ interface TeamMember {
     status: 'ACTIF' | 'INACTIF'
     lastLogin: string
 }
+
+// Separate memoized row component to improve INP performance
+const UserRow = memo(({
+    user,
+    onRoleChange,
+    onDeactivate
+}: {
+    user: TeamMember,
+    onRoleChange: (id: string, role: string) => void,
+    onDeactivate: (id: string) => void
+}) => {
+    return (
+        <TableRow className="hover:bg-slate-50/50 transition-colors">
+            <TableCell className="pl-6">
+                <Avatar className="h-10 w-10 ring-2 ring-primary/5">
+                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                        {user.name.charAt(0)}
+                    </AvatarFallback>
+                </Avatar>
+            </TableCell>
+            <TableCell>
+                <div className="font-bold text-slate-900">{user.name}</div>
+                <div className="text-xs text-muted-foreground font-medium">{user.email}</div>
+            </TableCell>
+            <TableCell>
+                <Badge variant="outline" className={
+                    user.role === 'ADMIN' ? "border-indigo-200 text-indigo-700 bg-indigo-50" :
+                        user.role === 'PHARMACIST' ? "border-emerald-200 text-emerald-700 bg-emerald-50" : "border-slate-200 bg-slate-50"
+                }>
+                    {user.role === 'ADMIN' && <Shield className="mr-1 h-3 w-3" />}
+                    {user.role}
+                </Badge>
+            </TableCell>
+            <TableCell>
+                <div className={`flex items-center gap-2 ${user.status === 'ACTIF' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                    <div className={`h-2 w-2 rounded-full ${user.status === 'ACTIF' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                    <span className="text-xs font-bold uppercase tracking-wider">{user.status}</span>
+                </div>
+            </TableCell>
+            <TableCell className="text-slate-500 text-xs font-medium italic">
+                {user.lastLogin === 'Jamais' ? 'Jamais connecté' : new Date(user.lastLogin).toLocaleString()}
+            </TableCell>
+            <TableCell className="text-right pr-6">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0 rounded-full hover:bg-slate-100">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 shadow-xl border-slate-200">
+                        <DropdownMenuLabel>Gestion du compte</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onRoleChange(user.id, 'ADMIN')} className="cursor-pointer">
+                            <Shield className="mr-2 h-4 w-4 text-indigo-500" /> Passer ADMIN
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onRoleChange(user.id, 'PHARMACIST')} className="cursor-pointer">
+                            <Shield className="mr-2 h-4 w-4 text-emerald-500" /> Passer PHARMACIEN
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onRoleChange(user.id, 'CASHIER')} className="cursor-pointer">
+                            <Shield className="mr-2 h-4 w-4 text-slate-500" /> Passer CAISSIER
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => onDeactivate(user.id)} className="text-rose-600 focus:bg-rose-50 cursor-pointer">
+                            <Trash2 className="mr-2 h-4 w-4" /> Désactiver
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </TableCell>
+        </TableRow>
+    )
+})
+
+UserRow.displayName = "UserRow"
 
 export default function UsersPage() {
     const [users, setUsers] = useState<TeamMember[]>([])
@@ -139,9 +211,11 @@ export default function UsersPage() {
         }
     }
 
-    const filteredUsers = users.filter(u =>
-        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredUsers = useMemo(() =>
+        users.filter(u =>
+            u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.email.toLowerCase().includes(searchTerm.toLowerCase())
+        ), [users, searchTerm]
     )
 
     return (
@@ -210,62 +284,12 @@ export default function UsersPage() {
                                 </TableRow>
                             ) : (
                                 filteredUsers.map((user) => (
-                                    <TableRow key={user.id} className="hover:bg-slate-50/50 transition-colors">
-                                        <TableCell className="pl-6">
-                                            <Avatar className="h-10 w-10 ring-2 ring-primary/5">
-                                                <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                                                    {user.name.charAt(0)}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="font-bold text-slate-900">{user.name}</div>
-                                            <div className="text-xs text-muted-foreground font-medium">{user.email}</div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline" className={
-                                                user.role === 'ADMIN' ? "border-indigo-200 text-indigo-700 bg-indigo-50" :
-                                                    user.role === 'PHARMACIST' ? "border-emerald-200 text-emerald-700 bg-emerald-50" : "border-slate-200 bg-slate-50"
-                                            }>
-                                                {user.role === 'ADMIN' && <Shield className="mr-1 h-3 w-3" />}
-                                                {user.role}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className={`flex items-center gap-2 ${user.status === 'ACTIF' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                                                <div className={`h-2 w-2 rounded-full ${user.status === 'ACTIF' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                                                <span className="text-xs font-bold uppercase tracking-wider">{user.status}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-slate-500 text-xs font-medium italic">
-                                            {user.lastLogin === 'Jamais' ? 'Jamais connecté' : new Date(user.lastLogin).toLocaleString()}
-                                        </TableCell>
-                                        <TableCell className="text-right pr-6">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" className="h-8 w-8 p-0 rounded-full hover:bg-slate-100">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-48 shadow-xl border-slate-200">
-                                                    <DropdownMenuLabel>Gestion du compte</DropdownMenuLabel>
-                                                    <DropdownMenuItem onClick={() => handleRoleChange(user.id, 'ADMIN')} className="cursor-pointer">
-                                                        <Shield className="mr-2 h-4 w-4 text-indigo-500" /> Passer ADMIN
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleRoleChange(user.id, 'PHARMACIST')} className="cursor-pointer">
-                                                        <Shield className="mr-2 h-4 w-4 text-emerald-500" /> Passer PHARMACIEN
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleRoleChange(user.id, 'CASHIER')} className="cursor-pointer">
-                                                        <Shield className="mr-2 h-4 w-4 text-slate-500" /> Passer CAISSIER
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => handleDeactivate(user.id)} className="text-rose-600 focus:bg-rose-50 cursor-pointer">
-                                                        <Trash2 className="mr-2 h-4 w-4" /> Désactiver
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
+                                    <UserRow
+                                        key={user.id}
+                                        user={user}
+                                        onRoleChange={handleRoleChange}
+                                        onDeactivate={handleDeactivate}
+                                    />
                                 ))
                             )}
                         </TableBody>

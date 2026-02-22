@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, memo } from "react"
 import { useCsvExport } from "@/hooks/useCsvExport"
 import {
     Table,
@@ -44,6 +44,83 @@ interface Product {
     status: 'OK' | 'LOW' | 'RUPTURE'
     nextExpiry: string | null
     batchesCount: number
+}
+
+// Separate memoized row component for performance optimization
+const ProductRow = memo(({ product }: { product: Product }) => {
+    return (
+        <TableRow className="hover:bg-slate-50/50">
+            <TableCell className="pl-6">
+                <div className="font-bold text-slate-900">{product.name}</div>
+                <div className="text-[10px] text-muted-foreground uppercase font-medium">{product.dci}</div>
+            </TableCell>
+            <TableCell className="text-center font-mono font-bold">{product.stock}</TableCell>
+            <TableCell>
+                <Badge variant={product.status === 'OK' ? 'default' : 'destructive'}
+                    className={product.status === 'OK' ? 'bg-emerald-600' : ''}>
+                    {product.status}
+                </Badge>
+            </TableCell>
+            <TableCell className="font-bold">{product.sellingPrice.toLocaleString()} F</TableCell>
+            <TableCell>
+                {product.nextExpiry ? (
+                    <div className="flex items-center text-xs font-bold text-slate-600">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        {new Date(product.nextExpiry).toLocaleDateString()}
+                    </div>
+                ) : '-'}
+            </TableCell>
+            <TableCell className="text-right pr-6">
+                <div className="flex justify-end gap-2">
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-primary">
+                        <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-rose-500">
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
+            </TableCell>
+        </TableRow>
+    )
+})
+
+ProductRow.displayName = "ProductRow"
+
+function ProductTable({ products, loading }: { products: Product[], loading: boolean }) {
+    if (loading) return (
+        <div className="h-48 flex flex-col items-center justify-center gap-2">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="text-sm font-medium text-slate-500">Chargement de l'inventaire...</span>
+        </div>
+    )
+
+    if (products.length === 0) return (
+        <div className="h-48 flex items-center justify-center text-slate-400">
+            Aucun produit trouvé.
+        </div>
+    )
+
+    return (
+        <div className="overflow-x-auto">
+            <Table>
+                <TableHeader className="bg-slate-50/50">
+                    <TableRow>
+                        <TableHead className="pl-6">Produit</TableHead>
+                        <TableHead className="text-center">Stock</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>Prix</TableHead>
+                        <TableHead>Péremption</TableHead>
+                        <TableHead className="text-right pr-6">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {products.map((p) => (
+                        <ProductRow key={p.id} product={p} />
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
+    )
 }
 
 export default function InventoryManager() {
@@ -114,13 +191,22 @@ export default function InventoryManager() {
         downloadCsv(exportData, `inventaire-${new Date().toISOString().split('T')[0]}.csv`)
     }
 
-    const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.dci.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredProducts = useMemo(() =>
+        products.filter(p =>
+            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.dci.toLowerCase().includes(searchTerm.toLowerCase())
+        ), [products, searchTerm]
     )
 
-    const lowStockProducts = products.filter(p => p.stock <= p.minThreshold)
-    const expiringSoon = products.filter(p => p.nextExpiry && (new Date(p.nextExpiry).getTime() - Date.now() < 90 * 24 * 3600 * 1000))
+    const lowStockProducts = useMemo(() =>
+        products.filter(p => p.stock <= p.minThreshold),
+        [products]
+    )
+
+    const expiringSoon = useMemo(() =>
+        products.filter(p => p.nextExpiry && (new Date(p.nextExpiry).getTime() - Date.now() < 90 * 24 * 3600 * 1000)),
+        [products]
+    )
 
     return (
         <div className="space-y-6">
@@ -220,74 +306,6 @@ export default function InventoryManager() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
-    )
-}
-
-function ProductTable({ products, loading }: { products: Product[], loading: boolean }) {
-    if (loading) return (
-        <div className="h-48 flex flex-col items-center justify-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="text-sm font-medium text-slate-500">Chargement de l'inventaire...</span>
-        </div>
-    )
-
-    if (products.length === 0) return (
-        <div className="h-48 flex items-center justify-center text-slate-400">
-            Aucun produit trouvé.
-        </div>
-    )
-
-    return (
-        <div className="overflow-x-auto">
-            <Table>
-                <TableHeader className="bg-slate-50/50">
-                    <TableRow>
-                        <TableHead className="pl-6">Produit</TableHead>
-                        <TableHead className="text-center">Stock</TableHead>
-                        <TableHead>Statut</TableHead>
-                        <TableHead>Prix</TableHead>
-                        <TableHead>Péremption</TableHead>
-                        <TableHead className="text-right pr-6">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {products.map((p) => (
-                        <TableRow key={p.id} className="hover:bg-slate-50/50">
-                            <TableCell className="pl-6">
-                                <div className="font-bold text-slate-900">{p.name}</div>
-                                <div className="text-[10px] text-muted-foreground uppercase font-medium">{p.dci}</div>
-                            </TableCell>
-                            <TableCell className="text-center font-mono font-bold">{p.stock}</TableCell>
-                            <TableCell>
-                                <Badge variant={p.status === 'OK' ? 'default' : 'destructive'}
-                                    className={p.status === 'OK' ? 'bg-emerald-600' : ''}>
-                                    {p.status}
-                                </Badge>
-                            </TableCell>
-                            <TableCell className="font-bold">{p.sellingPrice.toLocaleString()} F</TableCell>
-                            <TableCell>
-                                {p.nextExpiry ? (
-                                    <div className="flex items-center text-xs font-bold text-slate-600">
-                                        <Calendar className="h-3 w-3 mr-1" />
-                                        {new Date(p.nextExpiry).toLocaleDateString()}
-                                    </div>
-                                ) : '-'}
-                            </TableCell>
-                            <TableCell className="text-right pr-6">
-                                <div className="flex justify-end gap-2">
-                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-primary">
-                                        <Edit2 className="h-4 w-4" />
-                                    </Button>
-                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-rose-500">
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
         </div>
     )
 }
