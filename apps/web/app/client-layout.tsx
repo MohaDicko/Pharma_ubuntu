@@ -7,6 +7,27 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { OfflineBanner } from "@/components/OfflineBanner"
 import { usePathname } from "next/navigation"
 import { ToastProvider } from "@/components/ui/toast"
+import { CabinetUbuntuLogo } from "@/components/CabinetUbuntuLogo"
+
+// Écran de chargement partagé — évite la page blanche
+function LoadingScreen({ message = "Initialisation..." }: { message?: string }) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center bg-slate-50">
+            <div className="flex flex-col items-center gap-5">
+                <div className="relative">
+                    <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <CabinetUbuntuLogo className="h-7 w-7 text-primary" />
+                    </div>
+                </div>
+                <div className="text-center space-y-1">
+                    <p className="text-sm font-semibold text-slate-700">{message}</p>
+                    <p className="text-xs text-slate-400">Sahel CPMS</p>
+                </div>
+            </div>
+        </div>
+    )
+}
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
     const { user, loading } = useAuth()
@@ -14,37 +35,39 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
     // Routes publiques sans Sidebar
     if (pathname === '/login') {
-        return <main className="flex-1 min-h-screen bg-background">{children}</main>
-    }
-
-    if (loading) {
         return (
-            <div className="flex h-screen items-center justify-center bg-background">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                    <p className="text-sm font-medium text-muted-foreground animate-pulse">Initialisation du système...</p>
-                </div>
-            </div>
+            <>
+                <main className="flex-1 min-h-screen bg-background">{children}</main>
+                <ToastProvider />
+            </>
         )
     }
 
-    // Si on n'est pas sur login et pas de user après chargement, 
-    // l'utilisateur sera redirigé par le middleware, mais on évite de flasher le layout
+    // Chargement de la session : spinner au lieu de page blanche
+    if (loading) {
+        return <LoadingScreen message="Chargement de votre session..." />
+    }
+
+    // Pas encore de user (pendant la redirection middleware) :
+    // on affiche le spinner au lieu de null (page blanche)
     if (!user) {
-        return null;
+        return <LoadingScreen message="Vérification des accès..." />
     }
 
     // App principale avec Sidebar
     return (
-        <div className="flex flex-col h-screen overflow-hidden">
+        <div className="flex flex-col h-screen overflow-hidden animate-in fade-in duration-300">
             <OfflineBanner />
             <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
                 <MobileNav />
 
                 {/* Sidebar Navigation (Desktop) */}
                 <aside className="hidden w-64 flex-col border-r bg-card md:flex">
-                    <div className="flex h-14 items-center border-b px-4">
-                        <span className="text-xl font-bold text-primary">🏥 Sahel CPMS</span>
+                    <div className="flex h-14 items-center border-b px-4 gap-3">
+                        <div className="bg-primary/10 p-1.5 rounded-lg">
+                            <CabinetUbuntuLogo className="h-5 w-5 text-primary" />
+                        </div>
+                        <span className="text-base font-bold text-primary">Sahel CPMS</span>
                     </div>
                     <ScrollArea className="flex-1 py-4">
                         <div className="px-3 py-2">

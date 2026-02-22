@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, createContext, useContext } from "react"
+import React, { useMemo, createContext, useContext } from "react"
 import { useRouter } from "next/navigation"
 import { useSession, signOut as nextAuthSignOut } from "next-auth/react"
 
@@ -29,26 +29,23 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: session, status } = useSession()
-    const [user, setUser] = useState<User | null>(null)
     const loading = status === "loading"
     const router = useRouter()
 
-    useEffect(() => {
-        if (session?.user) {
-            setUser({
-                id: session.user.id || '1',
-                name: session.user.name || '',
-                email: session.user.email || '',
-                role: (session.user as any).role || 'CASHIER'
-            })
-        } else {
-            setUser(null)
+    // Dérivé directement de la session — pas de useState/useEffect supplémentaire
+    // Évite le cycle : session chargée → useEffect → setUser → re-render (page blanche)
+    const user: User | null = useMemo(() => {
+        if (!session?.user) return null
+        return {
+            id: session.user.id || '1',
+            name: session.user.name || '',
+            email: session.user.email || '',
+            role: ((session.user as any).role || 'CASHIER') as Role
         }
     }, [session])
 
     const logout = async () => {
         await nextAuthSignOut({ redirect: false })
-        setUser(null)
         router.push('/login')
         router.refresh()
     }
