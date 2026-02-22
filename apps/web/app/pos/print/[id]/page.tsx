@@ -23,16 +23,11 @@ export default function PrintReceiptPage() {
         //Charger les détails de la transaction pour impression
         async function fetchTx() {
             try {
-                // On réutilise l'API transactions existante (ou on filtre localement si pas d'endpoint unique)
-                // Pour l'instant, on va simuler ou adapter l'API transactions pour get by ID
-                // Disons qu'on fetch tout et qu'on trouve (pas optimal mais ok pour MVP)
-                const res = await fetch('/api/transactions')
-                const data = await res.json()
-                const tx = data.find((t: PrintTransaction) => t.id === id)
+                const res = await fetch(`/api/transactions/${id}`)
+                if (!res.ok) throw new Error("Transaction introuvable")
 
-                if (tx) {
-                    setTransaction(tx)
-                }
+                const data = await res.json()
+                setTransaction(data)
             } catch (e) {
                 console.error(e)
             } finally {

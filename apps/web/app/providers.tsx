@@ -1,11 +1,12 @@
-"use client"
-
 import { AuthProvider } from "@/hooks/useAuth"
+import { SessionProvider } from "next-auth/react"
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
-        <AuthProvider>
-            {children}
-        </AuthProvider>
+        <SessionProvider>
+            <AuthProvider>
+                {children}
+            </AuthProvider>
+        </SessionProvider>
     )
 }

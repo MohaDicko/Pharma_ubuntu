@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { z } from 'zod';
 import { rateLimit } from '@/lib/rate-limit';
+import { createAuditLog } from '@/lib/audit';
 
 const SaleSchema = z.object({
     paymentMethod: z.enum(['CASH', 'CARD', 'INSURANCE', 'MOBILE_MONEY']).optional().default('CASH'),
@@ -107,6 +108,12 @@ export async function POST(req: Request) {
             await tx.transaction.update({
                 where: { id: transaction.id },
                 data: { amount: totalAmount }
+            });
+
+            await createAuditLog(userId, 'CREATE_SALE', {
+                transactionId: transaction.id,
+                amount: totalAmount,
+                itemCount: items.length
             });
 
             return { transaction };

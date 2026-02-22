@@ -9,11 +9,19 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
     title: {
-        default: "Sahel Store - Gestion Pharmaceutique",
-        template: "%s | Sahel Store"
+        default: "Cabinet Ubuntu Pharm",
+        template: "%s | Ubuntu Pharm"
     },
-    description: "Système intelligent de gestion de stock et point de vente pour pharmacies cliniques en Afrique de l'Ouest.",
-    keywords: ["pharmacie", "gestion de stock", "Sahel", "CPMS", "POS", "santé"],
+    description: "Système de Gestion Pharmaceutique Optimisé - Cabinet Ubuntu",
+    keywords: ["pharmacie", "gestion de stock", "Mali", "Sahel", "POS", "santé"],
+    manifest: "/manifest.json",
+    themeColor: "#0ea5e9",
+    viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: "default",
+        title: "Ubuntu Pharm",
+    },
 }
 
 export default function RootLayout({

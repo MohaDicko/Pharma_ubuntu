@@ -57,6 +57,18 @@ export function Sidebar({ className, onClick, ...props }: SidebarProps) {
             roles: ['ADMIN']
         },
         {
+            title: "Sécurité & Audit",
+            href: "/audit",
+            icon: Users, // Changed icon to be more relevant or I could use Shield if I imported it
+            roles: ['ADMIN']
+        },
+        {
+            title: "Analyses & Rapports",
+            href: "/reports",
+            icon: BarChart4,
+            roles: ['ADMIN']
+        },
+        {
             title: "Paramètres",
             href: "/settings",
             icon: Settings,

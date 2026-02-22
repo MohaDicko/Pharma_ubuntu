@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Search, ShoppingCart, Plus, Minus, CreditCard, ScanBarcode } from "lucide-react"
+import { Search, ShoppingCart, Plus, Minus, CreditCard, ScanBarcode, Loader2 } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -104,10 +104,14 @@ export default function POSTerminal() {
     // const totalTions = 0 // TVA simplifiée ou incluse - removed as unused
     const totalTTC = totalHT
 
+    const [isCheckingOut, setIsCheckingOut] = useState(false)
+    const [lastTransactionId, setLastTransactionId] = useState<string | null>(null)
+
     // Encaisser
     const handleCheckout = async () => {
-        if (cart.length === 0) return
+        if (cart.length === 0 || isCheckingOut) return
 
+        setIsCheckingOut(true)
         try {
             const payload = {
                 items: cart.map(item => ({
@@ -129,15 +133,21 @@ export default function POSTerminal() {
             if (!res.ok) throw new Error(result.error || "Erreur transaction")
 
             // Succès !
-            // alert(`Vente réussie ! ID Transaction: ${result.transactionId}`)
+            setLastTransactionId(result.transactionId)
 
             // Ouvrir l'impression du ticket dans un nouvel onglet
             window.open(`/pos/print/${result.transactionId}`, '_blank');
 
             setCart([]) // Vider le panier
             fetchProducts() // Recharger les stocks à jour
+
+            // Reset success message after 5 seconds
+            setTimeout(() => setLastTransactionId(null), 5000)
+
         } catch (error) {
             alert("Erreur lors de la vente: " + (error as Error).message)
+        } finally {
+            setIsCheckingOut(false)
         }
     }
 
@@ -226,6 +236,13 @@ export default function POSTerminal() {
                 </ScrollArea>
 
                 <div className="p-6 bg-muted/10 border-t space-y-4">
+                    {lastTransactionId && (
+                        <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg text-sm flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+                            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                            <span>Vente réussie ! Ticket généré.</span>
+                        </div>
+                    )}
+
                     <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Total HT</span>
@@ -244,12 +261,21 @@ export default function POSTerminal() {
 
                     <Button
                         size="lg"
-                        className="w-full h-14 text-xl font-bold shadow-lg hover:scale-105 transition-transform"
-                        disabled={cart.length === 0}
+                        className={`w-full h-14 text-xl font-bold shadow-lg transition-all ${isCheckingOut ? 'opacity-70 scale-95' : 'hover:scale-105'}`}
+                        disabled={cart.length === 0 || isCheckingOut}
                         onClick={handleCheckout}
                     >
-                        <CreditCard className="mr-2 h-6 w-6" />
-                        ENCAISSER
+                        {isCheckingOut ? (
+                            <>
+                                <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                                TRAITEMENT...
+                            </>
+                        ) : (
+                            <>
+                                <CreditCard className="mr-2 h-6 w-6" />
+                                ENCAISSER
+                            </>
+                        )}
                     </Button>
                 </div>
             </Card>

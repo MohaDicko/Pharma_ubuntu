@@ -7,14 +7,19 @@ export const authConfig = {
     callbacks: {
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user;
-            const isOnDashboard = nextUrl.pathname === '/' || nextUrl.pathname.startsWith('/dashboard') || nextUrl.pathname.startsWith('/pos') || nextUrl.pathname.startsWith('/inventory');
+            const isOnDashboard = nextUrl.pathname === '/' ||
+                nextUrl.pathname.startsWith('/dashboard') ||
+                nextUrl.pathname.startsWith('/pos') ||
+                nextUrl.pathname.startsWith('/inventory') ||
+                nextUrl.pathname.startsWith('/transactions') ||
+                nextUrl.pathname.startsWith('/users') ||
+                nextUrl.pathname.startsWith('/settings');
 
             if (isOnDashboard) {
                 if (isLoggedIn) return true;
                 return false; // Redirect unauthenticated users to login page
-            } else if (isLoggedIn) {
-                // If user is authenticated and on login page, redirect to dashboard or pos
-                // return Response.redirect(new URL('/dashboard', nextUrl));
+            } else if (isLoggedIn && nextUrl.pathname === '/login') {
+                return Response.redirect(new URL('/', nextUrl));
             }
             return true;
         },
