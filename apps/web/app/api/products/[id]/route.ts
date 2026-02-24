@@ -48,19 +48,45 @@ export async function DELETE(
 
         const { id } = await params;
 
-        // Vérifier si le produit a des mouvements de stock (ledger immuable)
-        const movementCount = await prisma.stockMovement.count({ where: { productId: id } });
-        if (movementCount > 0) {
-            return NextResponse.json({
-                error: `Impossible de supprimer : ce produit a ${movementCount} mouvement(s) de stock enregistré(s). Archivage recommandé.`
-            }, { status: 409 });
+        // 1. Vérifier si le produit a des mouvements de stock (ledger immuable)
+        const product = await prisma.product.findUnique({
+            where: { id },
+            include: {
+                _count: {
+                    select: {
+                        movements: true,
+                        batches: true
+                    }
+                }
+            }
+        });
+
+        if (!product) {
+            return NextResponse.json({ error: "Produit non trouvé" }, { status: 404 });
         }
 
-        // Supprimer les lots d'abord (contrainte FK)
-        await prisma.batch.deleteMany({ where: { productId: id } });
-        await prisma.product.delete({ where: { id } });
+        const hasActivity = product._count.movements > 0;
 
-        return NextResponse.json({ success: true });
+        if (hasActivity) {
+            // Si le produit a de l'activité, on l'archive (soft delete)
+            await prisma.product.update({
+                where: { id },
+                data: { status: 'INACTIF' }
+            });
+            return NextResponse.json({
+                success: true,
+                message: "Produit archivé (données historiques conservées)"
+            });
+        } else {
+            // Si aucune activité, on supprime définitivement
+            // Supprimer les lots d'abord (contrainte FK)
+            await prisma.batch.deleteMany({ where: { productId: id } });
+            await prisma.product.delete({ where: { id } });
+            return NextResponse.json({
+                success: true,
+                message: "Produit supprimé définitivement"
+            });
+        }
     } catch (error) {
         console.error("Product DELETE Error:", error);
         return NextResponse.json({ error: "Erreur lors de la suppression" }, { status: 500 });

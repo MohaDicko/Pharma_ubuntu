@@ -11,6 +11,9 @@ interface PrintTransaction {
     items: { name: string; quantity: number; price: number }[];
     amount: number;
     paymentMethod: string;
+    insuranceName?: string;
+    insurancePart?: number;
+    patientPart?: number;
 }
 
 export default function PrintReceiptPage() {
@@ -63,6 +66,9 @@ export default function PrintReceiptPage() {
                 items={transaction.items}
                 total={transaction.amount}
                 paymentMethod={transaction.paymentMethod}
+                insuranceName={transaction.insuranceName}
+                insurancePart={transaction.insurancePart}
+                patientPart={transaction.patientPart}
                 cashierName="Admin"
             />
         </div>

@@ -7,6 +7,9 @@ import { createAuditLog } from '@/lib/audit';
 
 const SaleSchema = z.object({
     paymentMethod: z.enum(['CASH', 'CARD', 'INSURANCE', 'MOBILE_MONEY']).optional().default('CASH'),
+    insuranceId: z.string().uuid().optional().nullable(),
+    insurancePart: z.number().nonnegative().optional(),
+    patientPart: z.number().nonnegative().optional(),
     items: z.array(z.object({
         productId: z.string().uuid(),
         quantity: z.number().int().positive(),
@@ -46,7 +49,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Données invalides", details: validation.error.format() }, { status: 400 });
         }
 
-        const { items, paymentMethod } = validation.data;
+        const { items, paymentMethod, insuranceId, insurancePart, patientPart } = validation.data;
 
         const result = await prisma.$transaction(async (tx: any) => {
             let totalAmount = 0;
@@ -58,6 +61,9 @@ export async function POST(req: Request) {
                     paymentMethod: paymentMethod,
                     status: 'COMPLETED',
                     userId: userId,
+                    insuranceId: insuranceId,
+                    insurancePart: insurancePart || 0,
+                    patientPart: patientPart || 0
                 }
             });
 

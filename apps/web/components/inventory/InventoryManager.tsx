@@ -12,13 +12,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Search, Plus, FileDown, Calendar, RefreshCw, Loader2, Trash2, Edit2, AlertTriangle, PackagePlus } from "lucide-react"
+import { Search, Plus, FileDown, Calendar, RefreshCw, Trash2, Edit2, AlertTriangle, PackagePlus, Loader2 } from "lucide-react"
 import {
     Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/toast"
 import { useAuth } from "@/hooks/useAuth"
+import { TableSkeleton } from "@/components/ui/skeleton"
 
 interface Product {
     id: string
@@ -28,9 +29,28 @@ interface Product {
     stock: number
     minThreshold: number
     sellingPrice: number
-    status: 'OK' | 'LOW' | 'RUPTURE'
+    inventoryStatus: 'OK' | 'LOW' | 'RUPTURE'
+    status: 'ACTIF' | 'INACTIF'
     nextExpiry: string | null
     batchesCount: number
+}
+
+// ─── Barre de stock visuelle ──────────────────────────────────────────────
+function StockBar({ stock, minThreshold }: { stock: number; minThreshold: number }) {
+    const pct = minThreshold > 0 ? Math.min((stock / (minThreshold * 3)) * 100, 100) : 100
+    const color = stock <= 0 ? 'bg-rose-500' : stock <= minThreshold ? 'bg-amber-400' : 'bg-emerald-500'
+    return (
+        <div className="flex items-center gap-2">
+            <span className={`font-mono font-black text-base ${stock <= 0 ? 'text-rose-600' : stock <= minThreshold ? 'text-amber-600' : 'text-slate-800'
+                }`}>{stock}</span>
+            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden min-w-[40px]">
+                <div
+                    className={`h-full rounded-full transition-all duration-500 ${color}`}
+                    style={{ width: `${pct}%` }}
+                />
+            </div>
+        </div>
+    )
 }
 
 // ─── Memoized Row ─────────────────────────────────────────────────────────
@@ -46,18 +66,16 @@ const ProductRow = memo(({ product, onEdit, onDelete, canDelete }: {
             <div className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">{product.dci || '-'}</div>
             <div className="text-[10px] text-slate-400">{product.category}</div>
         </TableCell>
-        <TableCell className="text-center font-mono font-bold text-lg">
-            <span className={product.stock <= 0 ? 'text-rose-600' : product.stock <= product.minThreshold ? 'text-amber-600' : 'text-slate-800'}>
-                {product.stock}
-            </span>
+        <TableCell>
+            <StockBar stock={product.stock} minThreshold={product.minThreshold} />
         </TableCell>
         <TableCell>
-            <Badge variant={product.status === 'OK' ? 'default' : 'destructive'}
+            <Badge variant={product.inventoryStatus === 'OK' ? 'default' : 'destructive'}
                 className={
-                    product.status === 'OK' ? 'bg-emerald-600' :
-                        product.status === 'LOW' ? 'bg-amber-500' : ''
+                    product.inventoryStatus === 'OK' ? 'bg-emerald-600' :
+                        product.inventoryStatus === 'LOW' ? 'bg-amber-500' : ''
                 }>
-                {product.status}
+                {product.inventoryStatus}
             </Badge>
         </TableCell>
         <TableCell className="font-bold text-slate-700">{product.sellingPrice.toLocaleString()} F</TableCell>
@@ -87,22 +105,31 @@ const ProductRow = memo(({ product, onEdit, onDelete, canDelete }: {
 ))
 ProductRow.displayName = "ProductRow"
 
-function ProductTable({ products, loading, onEdit, onDelete, canDelete }: {
+function ProductTable({ products, loading, onEdit, onDelete, canDelete, onAddClick }: {
     products: Product[], loading: boolean,
     onEdit: (p: Product) => void, onDelete: (p: Product) => void,
-    canDelete: boolean
+    canDelete: boolean, onAddClick?: () => void
 }) {
     if (loading) return (
-        <div className="h-48 flex flex-col items-center justify-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="text-sm font-medium text-slate-500">Chargement de l'inventaire...</span>
+        <div className="p-4">
+            <TableSkeleton rows={6} cols={6} />
         </div>
     )
 
     if (products.length === 0) return (
-        <div className="h-48 flex flex-col items-center justify-center text-slate-400 gap-2">
-            <PackagePlus className="h-10 w-10 text-slate-200" />
-            <span className="text-sm">Aucun produit trouvé.</span>
+        <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <div className="h-20 w-20 rounded-2xl bg-slate-100 flex items-center justify-center">
+                <PackagePlus className="h-10 w-10 text-slate-300" />
+            </div>
+            <div className="text-center space-y-1">
+                <p className="font-bold text-slate-700">Aucun produit trouvé</p>
+                <p className="text-sm text-slate-400">Ajoutez votre premier médicament pour démarrer l&apos;inventaire.</p>
+            </div>
+            {onAddClick && (
+                <Button onClick={onAddClick} className="gap-2 shadow-md">
+                    <Plus className="h-4 w-4" /> Ajouter un produit
+                </Button>
+            )}
         </div>
     )
 
@@ -154,7 +181,7 @@ export default function InventoryManager() {
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     // Formulaire Édition
-    const [editForm, setEditForm] = useState({ name: "", dci: "", sellingPrice: "", minThreshold: "" })
+    const [editForm, setEditForm] = useState({ name: "", dci: "", category: "", sellingPrice: "", minThreshold: "" })
     const [isEditing, setIsEditing] = useState(false)
 
     async function fetchInventory() {
@@ -186,9 +213,11 @@ export default function InventoryManager() {
                 body: JSON.stringify(newProduct)
             })
             if (res.ok) {
+                const createdProduct = await res.json()
+                // Mise à jour locale instantanée au lieu d'un refetch complet
+                setProducts(current => [createdProduct, ...current])
                 setIsAddModalOpen(false)
                 setNewProduct({ name: "", dci: "", category: "Médicament", sellingPrice: "", minThreshold: "5", initialQuantity: "", costPrice: "", expiryDate: "", batchNumber: "" })
-                fetchInventory()
                 toast("Produit ajouté avec succès !", 'success')
             } else {
                 const err = await res.json()
@@ -207,6 +236,7 @@ export default function InventoryManager() {
         setEditForm({
             name: product.name,
             dci: product.dci || '',
+            category: product.category || 'Médicament',
             sellingPrice: String(product.sellingPrice),
             minThreshold: String(product.minThreshold)
         })
@@ -223,8 +253,10 @@ export default function InventoryManager() {
                 body: JSON.stringify(editForm)
             })
             if (res.ok) {
+                const updatedProduct = await res.json()
+                // Update localement sans refetch
+                setProducts(current => current.map(p => p.id === updatedProduct.id ? { ...p, ...updatedProduct } : p))
                 setEditProduct(null)
-                fetchInventory()
                 toast("Produit mis à jour !", 'success')
             } else {
                 const err = await res.json()
@@ -244,8 +276,15 @@ export default function InventoryManager() {
         try {
             const res = await fetch(`/api/products/${deleteProduct.id}`, { method: 'DELETE' })
             if (res.ok) {
+                const data = await res.json()
+                // Si c'est un archivage (soft delete), on change juste le statut ou on retire de la vue active
+                if (data.message && data.message.includes('archivé')) {
+                    setProducts(current => current.filter(p => p.id !== deleteProduct.id))
+                } else {
+                    // Suppression définitive
+                    setProducts(current => current.filter(p => p.id !== deleteProduct.id))
+                }
                 setDeleteProduct(null)
-                fetchInventory()
                 toast(`"${deleteProduct.name}" supprimé`, 'success')
             } else {
                 const err = await res.json()
@@ -260,7 +299,7 @@ export default function InventoryManager() {
     }
 
     const handleExport = () => {
-        const data = products.map(p => ({ Nom: p.name, DCI: p.dci, Stock: p.stock, Prix: p.sellingPrice, Statut: p.status }))
+        const data = products.map(p => ({ Nom: p.name, DCI: p.dci, Stock: p.stock, Prix: p.sellingPrice, Statut: p.inventoryStatus }))
         downloadCsv(data, `inventaire-${new Date().toISOString().split('T')[0]}.csv`)
     }
 
@@ -303,7 +342,7 @@ export default function InventoryManager() {
             {/* KPI rapides */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <Card className="border-none shadow-sm bg-white"><CardContent className="p-4"><div className="text-xs text-slate-500 mb-1">Total Références</div><div className="text-2xl font-bold text-slate-900">{products.length}</div></CardContent></Card>
-                <Card className="border-none shadow-sm bg-emerald-50"><CardContent className="p-4"><div className="text-xs text-emerald-700 mb-1">En Stock</div><div className="text-2xl font-bold text-emerald-700">{products.filter(p => p.status === 'OK').length}</div></CardContent></Card>
+                <Card className="border-none shadow-sm bg-emerald-50"><CardContent className="p-4"><div className="text-xs text-emerald-700 mb-1">En Stock</div><div className="text-2xl font-bold text-emerald-700">{products.filter(p => p.inventoryStatus === 'OK').length}</div></CardContent></Card>
                 <Card className="border-none shadow-sm bg-amber-50"><CardContent className="p-4"><div className="text-xs text-amber-700 mb-1">Stock Bas</div><div className="text-2xl font-bold text-amber-700">{lowStockProducts.length}</div></CardContent></Card>
                 <Card className="border-none shadow-sm bg-rose-50"><CardContent className="p-4"><div className="text-xs text-rose-700 mb-1">Ruptures</div><div className="text-2xl font-bold text-rose-700">{ruptures.length}</div></CardContent></Card>
             </div>
@@ -338,7 +377,8 @@ export default function InventoryManager() {
                 <TabsContent value="all">
                     <Card className="border-none shadow-md overflow-hidden">
                         <CardContent className="p-0">
-                            <ProductTable products={filteredProducts} {...tableProps} />
+                            <ProductTable products={filteredProducts} {...tableProps}
+                                onAddClick={canManage ? () => setIsAddModalOpen(true) : undefined} />
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -440,36 +480,45 @@ export default function InventoryManager() {
 
             {/* ─── Modal : Éditer Produit ─── */}
             <Dialog open={!!editProduct} onOpenChange={() => setEditProduct(null)}>
-                <DialogContent className="sm:max-w-[420px]">
+                <DialogContent className="sm:max-w-[480px]">
                     <DialogHeader>
-                        <DialogTitle>Modifier le produit</DialogTitle>
-                        <DialogDescription>Modifiez les informations de la fiche produit.</DialogDescription>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Edit2 className="h-5 w-5 text-primary" />
+                            Modifier la fiche produit
+                        </DialogTitle>
+                        <DialogDescription>
+                            Mettez à jour les informations de base du médicament.
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
-                            <Label>Nom Commercial</Label>
-                            <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+                            <Label htmlFor="e-name">Nom Commercial</Label>
+                            <Input id="e-name" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
                         </div>
                         <div className="grid gap-2">
-                            <Label>DCI / Molécule</Label>
-                            <Input value={editForm.dci} onChange={(e) => setEditForm({ ...editForm, dci: e.target.value })} />
+                            <Label htmlFor="e-dci">DCI / Molécule</Label>
+                            <Input id="e-dci" value={editForm.dci} onChange={(e) => setEditForm({ ...editForm, dci: e.target.value })} />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="e-category">Catégorie</Label>
+                            <Input id="e-category" value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })} />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <Label>Prix de Vente (F)</Label>
-                                <Input type="number" value={editForm.sellingPrice} onChange={(e) => setEditForm({ ...editForm, sellingPrice: e.target.value })} />
+                                <Label htmlFor="e-price">Prix de Vente (F)</Label>
+                                <Input id="e-price" type="number" value={editForm.sellingPrice} onChange={(e) => setEditForm({ ...editForm, sellingPrice: e.target.value })} />
                             </div>
                             <div className="grid gap-2">
-                                <Label>Seuil d'Alerte</Label>
-                                <Input type="number" value={editForm.minThreshold} onChange={(e) => setEditForm({ ...editForm, minThreshold: e.target.value })} />
+                                <Label htmlFor="e-min">Seuil d'Alerte</Label>
+                                <Input id="e-min" type="number" value={editForm.minThreshold} onChange={(e) => setEditForm({ ...editForm, minThreshold: e.target.value })} />
                             </div>
                         </div>
                     </div>
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => setEditProduct(null)} disabled={isEditing}>Annuler</Button>
-                        <Button onClick={handleEditSave} disabled={isEditing}>
+                        <Button onClick={handleEditSave} disabled={isEditing} className="shadow-md">
                             {isEditing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Edit2 className="h-4 w-4 mr-2" />}
-                            Sauvegarder
+                            Enregistrer les changements
                         </Button>
                     </DialogFooter>
                 </DialogContent>

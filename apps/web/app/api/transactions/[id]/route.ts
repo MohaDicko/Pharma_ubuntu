@@ -26,7 +26,8 @@ export async function GET(
                     select: {
                         name: true
                     }
-                }
+                },
+                insurance: true
             }
         });
 
@@ -61,6 +62,9 @@ export async function GET(
             amount: Number(tx.amount),
             paymentMethod: tx.paymentMethod,
             cashierName: tx.user?.name || 'Admin',
+            insuranceName: tx.insurance?.name,
+            insurancePart: Number(tx.insurancePart),
+            patientPart: Number(tx.patientPart),
             items: Array.from(itemsMap.values())
         };
 

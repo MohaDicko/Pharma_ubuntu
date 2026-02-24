@@ -52,15 +52,50 @@ export async function DELETE(
             return NextResponse.json({ error: "Vous ne pouvez pas supprimer votre propre compte" }, { status: 400 });
         }
 
-        // Pour la sécurité, on préfère souvent désactiver
-        await prisma.user.update({
+        // 1. Vérifier si l'utilisateur a une activité (transactions ou mouvements)
+        const user = await prisma.user.findUnique({
             where: { id },
-            data: { status: 'INACTIF' } as any
+            include: {
+                _count: {
+                    select: {
+                        transactions: true,
+                        stockMovements: true,
+                        auditLogs: true
+                    }
+                }
+            }
         });
 
-        return NextResponse.json({ success: true });
+        if (!user) {
+            return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
+        }
+
+        const hasActivity = user._count.transactions > 0 || user._count.stockMovements > 0;
+
+        if (hasActivity) {
+            // Si l'utilisateur a de l'activité, on désactive seulement (soft delete)
+            await prisma.user.update({
+                where: { id },
+                data: { status: 'INACTIF' }
+            });
+            return NextResponse.json({
+                success: true,
+                message: "Utilisateur désactivé (données historiques conservées)"
+            });
+        } else {
+            // Si aucune activité, on supprime définitivement
+            // On peut supprimer les logs d'audit d'abord s'il y en a (bien que hasActivity vérifie transactions/mouvements)
+            if (user._count.auditLogs > 0) {
+                await prisma.auditLog.deleteMany({ where: { userId: id } });
+            }
+            await prisma.user.delete({ where: { id } });
+            return NextResponse.json({
+                success: true,
+                message: "Utilisateur supprimé définitivement"
+            });
+        }
     } catch (error) {
         console.error("User DELETE API Error:", error);
-        return NextResponse.json({ error: "Erreur lors de la désactivation" }, { status: 500 });
+        return NextResponse.json({ error: "Erreur lors de la suppression de l'utilisateur" }, { status: 500 });
     }
 }

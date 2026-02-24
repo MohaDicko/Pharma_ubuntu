@@ -27,6 +27,7 @@ export async function GET() {
         const dailyRevenue = salesToday.reduce((sum: number, tx: { amount: unknown }) => sum + Number(tx.amount), 0);
 
         const allProducts = await prisma.product.findMany({
+            where: { status: 'ACTIF' },
             include: {
                 batches: {
                     where: { quantity: { gt: 0 } }

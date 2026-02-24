@@ -97,10 +97,10 @@ export default function AuditPage() {
                                     <div className="flex-1 space-y-1">
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <p className="font-bold text-sm flex items-center gap-2">
+                                                <div className="font-bold text-sm flex items-center gap-2">
                                                     {log.user.name}
                                                     <Badge variant="outline" className="text-[10px] font-normal uppercase">{log.user.role}</Badge>
-                                                </p>
+                                                </div>
                                                 <p className="text-sm font-mono text-primary font-semibold">{log.action}</p>
                                             </div>
                                             <p className="text-xs text-muted-foreground">

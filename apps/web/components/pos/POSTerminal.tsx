@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import {
     Search, ShoppingCart, Plus, Minus, CreditCard,
     ScanBarcode, Loader2, Trash2, Package, Smartphone,
-    Banknote, CheckCircle2, ArrowLeft, Calculator
+    Banknote, CheckCircle2, ArrowLeft, Calculator, ShieldCheck
 } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
@@ -16,10 +16,12 @@ import { toast } from "@/components/ui/toast"
 // ── Types ────────────────────────────────────────────────────────
 interface Product { id: string; name: string; price: number; stock: number }
 interface CartItem extends Product { quantity: number }
-type PaymentMethod = 'CASH' | 'MOBILE_MONEY' | 'CARD'
+interface Insurance { id: string; name: string; percentage: number }
+type PaymentMethod = 'CASH' | 'MOBILE_MONEY' | 'CARD' | 'INSURANCE'
 
 const PAYMENT_METHODS: { id: PaymentMethod; label: string; icon: React.ElementType; color: string }[] = [
     { id: 'CASH', label: 'Espèces', icon: Banknote, color: 'emerald' },
+    { id: 'INSURANCE', label: 'Assurance', icon: ShieldCheck, color: 'indigo' },
     { id: 'MOBILE_MONEY', label: 'Mobile Money', icon: Smartphone, color: 'orange' },
     { id: 'CARD', label: 'Carte Bancaire', icon: CreditCard, color: 'blue' },
 ]
@@ -35,18 +37,23 @@ export default function POSTerminal() {
     const [searchQuery, setSearchQuery] = useState("")
     const [cart, setCart] = useState<CartItem[]>([])
     const [products, setProducts] = useState<Product[]>([])
+    const [insurances, setInsurances] = useState<Insurance[]>([])
     const [loading, setLoading] = useState(true)
     const [isCheckingOut, setIsCheckingOut] = useState(false)
     const [lastTransactionId, setLastTransactionId] = useState<string | null>(null)
     const [mobileView, setMobileView] = useState<'products' | 'cart'>('products')
     // Paiement
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH')
+    const [selectedInsurance, setSelectedInsurance] = useState<Insurance | null>(null)
     const [amountReceived, setAmountReceived] = useState("")
     const [checkoutStep, setCheckoutStep] = useState<'cart' | 'payment' | 'success'>('cart')
 
     const searchInputRef = useRef<HTMLInputElement>(null)
 
-    useEffect(() => { fetchProducts() }, [])
+    useEffect(() => {
+        fetchProducts()
+        fetchInsurances()
+    }, [])
 
     async function fetchProducts() {
         try {
@@ -59,6 +66,16 @@ export default function POSTerminal() {
             }
         } catch (e) { console.error("Erreur chargement produits", e) }
         finally { setLoading(false) }
+    }
+
+    async function fetchInsurances() {
+        try {
+            const res = await fetch('/api/insurances')
+            if (res.ok) {
+                const data = await res.json()
+                setInsurances(data)
+            }
+        } catch (e) { console.error("Erreur chargement assurances", e) }
     }
 
     const filteredProducts = products.filter(p =>
@@ -90,9 +107,18 @@ export default function POSTerminal() {
 
     const totalTTC = cart.reduce((s, i) => s + i.price * i.quantity, 0)
     const cartCount = cart.reduce((s, i) => s + i.quantity, 0)
+
+    // Calcul de la part assurance
+    const insuranceAmount = paymentMethod === 'INSURANCE' && selectedInsurance
+        ? (totalTTC * selectedInsurance.percentage) / 100
+        : 0
+    const patientDue = totalTTC - insuranceAmount
+
     const received = parseFloat(amountReceived.replace(/\s/g, '')) || 0
-    const change = received - totalTTC
-    const changeOk = paymentMethod !== 'CASH' || received >= totalTTC
+    const change = received - (paymentMethod === 'INSURANCE' ? patientDue : totalTTC)
+    const changeOk = (paymentMethod !== 'CASH' && paymentMethod !== 'INSURANCE')
+        || (paymentMethod === 'INSURANCE' && (!selectedInsurance ? false : received >= patientDue))
+        || (paymentMethod === 'CASH' && received >= totalTTC)
 
     const resetCheckout = () => {
         setCheckoutStep('cart')
@@ -106,6 +132,10 @@ export default function POSTerminal() {
             toast("Montant insuffisant — veuillez vérifier.", 'warning')
             return
         }
+        if (paymentMethod === 'INSURANCE' && (!selectedInsurance || received < patientDue)) {
+            toast("Veuillez sélectionner une assurance et vérifier l'encaissement patient.", 'warning')
+            return
+        }
         setIsCheckingOut(true)
         try {
             const res = await fetch('/api/sales', {
@@ -113,7 +143,10 @@ export default function POSTerminal() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     items: cart.map(i => ({ productId: i.id, quantity: i.quantity, sellingPrice: i.price })),
-                    paymentMethod
+                    paymentMethod,
+                    insuranceId: selectedInsurance?.id,
+                    insurancePart: insuranceAmount,
+                    patientPart: patientDue
                 })
             })
             const result = await res.json()
@@ -436,8 +469,71 @@ export default function POSTerminal() {
                             </div>
                         )}
 
+                        {/* ─ Section Assurance ─ */}
+                        {paymentMethod === 'INSURANCE' && (
+                            <div className="space-y-4">
+                                <div>
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Choisir l'Assureur</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {insurances.map(ins => (
+                                            <button
+                                                key={ins.id}
+                                                onClick={() => {
+                                                    setSelectedInsurance(ins)
+                                                    setAmountReceived("") // Reset received amount when changing insurance
+                                                }}
+                                                className={`p-3 rounded-xl border-2 transition-all text-xs font-bold flex flex-col items-center gap-1
+                                                    ${selectedInsurance?.id === ins.id
+                                                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                                                        : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'}`}
+                                            >
+                                                <span>{ins.name}</span>
+                                                <span className="text-[10px] opacity-70">Prise en charge: {ins.percentage}%</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {selectedInsurance && (
+                                    <div className="bg-slate-50 rounded-xl border p-4 space-y-3">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-slate-500">Part Assurance ({selectedInsurance.percentage}%)</span>
+                                            <span className="font-bold text-indigo-600">-{insuranceAmount.toLocaleString()} F</span>
+                                        </div>
+                                        <Separator />
+                                        <div className="flex justify-between items-center text-lg">
+                                            <span className="font-bold text-slate-700">Reste à payer</span>
+                                            <span className="font-black text-slate-900">{patientDue.toLocaleString()} F</span>
+                                        </div>
+
+                                        <div className="pt-2">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Montant reçu (Espèces)</p>
+                                            <div className="relative">
+                                                <Input
+                                                    type="number"
+                                                    placeholder="Encaissement patient..."
+                                                    className="h-12 text-lg font-bold text-right pr-12"
+                                                    value={amountReceived}
+                                                    onChange={e => setAmountReceived(e.target.value)}
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">F</span>
+                                            </div>
+                                            {received > 0 && (
+                                                <div className="flex justify-between items-center mt-2 px-1">
+                                                    <span className="text-[10px] text-slate-500">Monnaie à rendre :</span>
+                                                    <span className={`text-sm font-bold ${change >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                                        {Math.max(0, change).toLocaleString()} F
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* ─ Mobile Money / Carte ─ */}
-                        {paymentMethod !== 'CASH' && (
+                        {(paymentMethod === 'MOBILE_MONEY' || paymentMethod === 'CARD') && (
                             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center space-y-2">
                                 {paymentMethod === 'MOBILE_MONEY' ? (
                                     <>

@@ -15,7 +15,7 @@ enum Role {
   CASHIER    // Caissier (Ventes uniquement)
 }
 
-enum UserStatus {
+enum Status {
   ACTIF
   INACTIF
 }
@@ -26,7 +26,7 @@ model User {
   password        String    // Hashed
   name            String
   role            Role      @default(CASHIER)
-  status          UserStatus @default(ACTIF)
+  status          Status    @default(ACTIF)
   
   // Relations inverses
   stockMovements  StockMovement[]
@@ -47,6 +47,7 @@ model Product {
   category        String   // Ex: Antibiotique, Analgésique
   minThreshold    Int      // Alerte Seuil Mini
   sellingPrice    Decimal  @default(0) // Prix de Vente Public
+  status          Status   @default(ACTIF)
   
   // Identification
   codeMatrix      String?  @unique // DataMatrix complet
@@ -122,9 +123,15 @@ model Transaction {
   id              String   @id @default(uuid())
   amount          Decimal
   type            String   // SALE, PURCHASE, REFUND
-  paymentMethod   String   // CASH, CARD, INSURANCE
+  paymentMethod   String   // CASH, CARD, INSURANCE, MOBILE_MONEY
   status          String   @default("COMPLETED") // COMPLETED, CANCELLED, PENDING
   
+  // Insurance fields
+  insuranceId     String?
+  insurancePart   Decimal? @default(0)
+  patientPart     Decimal? @default(0)
+  insurance       Insurance? @relation(fields: [insuranceId], references: [id])
+
   // Relation User (Qui a encaissé)
   userId          String   @default("system")
   user            User?    @relation(fields: [userId], references: [id])
@@ -136,6 +143,19 @@ model Transaction {
 
   @@index([userId])
   @@map("transactions")
+}
+
+model Insurance {
+  id           String        @id @default(uuid())
+  name         String        @unique
+  code         String?       @unique
+  percentage   Int           @default(0) // Taux de prise en charge par défaut
+  status       Status        @default(ACTIF)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+
+  @@map("insurances")
 }
 
 // 5. Audit Log (Sécurité)

@@ -21,6 +21,9 @@ interface ReceiptProps {
         email?: string;
         taxId?: string;
     };
+    insuranceName?: string;
+    insurancePart?: number;
+    patientPart?: number;
 }
 
 export const Receipt = React.forwardRef<HTMLDivElement, ReceiptProps>(({
@@ -35,7 +38,10 @@ export const Receipt = React.forwardRef<HTMLDivElement, ReceiptProps>(({
         address: "Doumanzana, Rue 339, Porte 52, Bamako, Mali",
         phone: "+223 75 12 25 25",
         email: "contact@cabinet-ubuntu.com"
-    }
+    },
+    insuranceName,
+    insurancePart = 0,
+    patientPart = 0
 }, ref) => {
     // Calculs
     const totalHT = Math.round(total / 1.18);
@@ -111,6 +117,19 @@ export const Receipt = React.forwardRef<HTMLDivElement, ReceiptProps>(({
                     <span>TVA (18%)</span>
                     <span>{totalTVA.toLocaleString()} F</span>
                 </div>
+
+                {insurancePart > 0 && (
+                    <div className="space-y-1 pt-1 mt-1 border-t border-dotted border-gray-400">
+                        <div className="flex justify-between text-[10px] font-bold text-indigo-700">
+                            <span>Prise en charge {insuranceName}</span>
+                            <span>-{insurancePart.toLocaleString()} F</span>
+                        </div>
+                        <div className="flex justify-between text-[10px] font-bold">
+                            <span>Ticket Modérateur (Patient)</span>
+                            <span>{patientPart.toLocaleString()} F</span>
+                        </div>
+                    </div>
+                )}
 
                 <div className="flex justify-between items-end mt-2 pt-2 border-t border-black border-dashed">
                     <span className="font-bold text-sm">NET À PAYER</span>

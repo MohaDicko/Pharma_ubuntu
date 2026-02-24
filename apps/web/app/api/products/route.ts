@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
     try {
         const products = await prisma.product.findMany({
+            where: { status: 'ACTIF' },
             orderBy: { name: 'asc' },
             include: {
                 batches: {
@@ -25,15 +26,15 @@ export async function GET() {
                 ? product.batches.reduce((min, b) => b.expiryDate < min ? b.expiryDate : min, product.batches[0].expiryDate)
                 : null;
 
-            let status = 'OK';
-            if (totalStock <= 0) status = 'RUPTURE';
-            else if (totalStock <= product.minThreshold) status = 'LOW';
+            let inventoryStatus = 'OK';
+            if (totalStock <= 0) inventoryStatus = 'RUPTURE';
+            else if (totalStock <= product.minThreshold) inventoryStatus = 'LOW';
 
             return {
                 ...product,
                 stock: totalStock,
                 sellingPrice: Number(product.sellingPrice),
-                status,
+                inventoryStatus,
                 nextExpiry: nextExpiryDate ? nextExpiryDate.toISOString() : null,
                 batchesCount: product.batches.length
             };
@@ -73,28 +74,46 @@ export async function POST(req: Request) {
         }
 
         // Créer le produit + lot initial en une seule transaction atomique
-        const newProduct = await prisma.product.create({
-            data: {
-                name,
-                dci: dci || '',
-                category: category || 'Divers',
-                sellingPrice: Number(sellingPrice),
-                minThreshold: Number(minThreshold) || 5,
-                // Créer le lot initial si quantité fournie
-                ...(initialQuantity && Number(initialQuantity) > 0 && {
-                    batches: {
-                        create: {
-                            batchNumber: batchNumber || `LOT-${Date.now()}`,
-                            quantity: Number(initialQuantity),
-                            costPrice: Number(costPrice) || Number(sellingPrice) * 0.7,
-                            expiryDate: expiryDate ? new Date(expiryDate) : new Date(Date.now() + 365 * 24 * 3600 * 1000) // +1 an par défaut
+        const newProduct = await prisma.$transaction(async (tx) => {
+            const product = await tx.product.create({
+                data: {
+                    name,
+                    dci: dci || '',
+                    category: category || 'Divers',
+                    sellingPrice: Number(sellingPrice),
+                    minThreshold: Number(minThreshold) || 5,
+                    // Créer le lot initial si quantité fournie
+                    ...(initialQuantity && Number(initialQuantity) > 0 && {
+                        batches: {
+                            create: {
+                                batchNumber: batchNumber || `LOT-${Date.now()}`,
+                                quantity: Number(initialQuantity),
+                                costPrice: Number(costPrice) || Number(sellingPrice) * 0.7,
+                                expiryDate: expiryDate ? new Date(expiryDate) : new Date(Date.now() + 365 * 24 * 3600 * 1000)
+                            }
                         }
+                    })
+                },
+                include: {
+                    batches: true
+                }
+            });
+
+            // Si un lot a été créé, on enregistre le mouvement de stock initial
+            if (initialQuantity && Number(initialQuantity) > 0 && product.batches.length > 0) {
+                await tx.stockMovement.create({
+                    data: {
+                        type: 'IN',
+                        quantity: Number(initialQuantity),
+                        productId: product.id,
+                        batchId: product.batches[0].id,
+                        userId: session.user.id as string,
+                        reason: "Stock Initial"
                     }
-                })
-            },
-            include: {
-                batches: true
+                });
             }
+
+            return product;
         });
 
         return NextResponse.json(newProduct, { status: 201 });

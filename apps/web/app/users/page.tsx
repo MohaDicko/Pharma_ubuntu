@@ -148,9 +148,11 @@ export default function UsersPage() {
                 body: JSON.stringify(newData)
             })
             if (res.ok) {
+                const newUser = await res.json()
+                // Update locale
+                setUsers(current => [newUser, ...current])
                 setIsAddModalOpen(false)
                 setNewData({ name: "", email: "", password: "", role: "CASHIER" })
-                fetchUsers()
                 toast("Compte créé avec succès", 'success')
             } else {
                 const err = await res.json()
@@ -169,11 +171,13 @@ export default function UsersPage() {
         setIsDeactivating(true)
         try {
             const res = await fetch(`/api/users/${confirmUser.id}`, { method: 'DELETE' })
+            const data = await res.json()
             if (res.ok) {
-                toast(`Compte de ${confirmUser.name} désactivé`, 'success')
-                fetchUsers()
+                // Update locale
+                setUsers(current => current.filter(u => u.id !== confirmUser.id))
+                toast(data.message || `Compte de ${confirmUser.name} traité`, 'success')
             } else {
-                toast("Erreur lors de la désactivation", 'error')
+                toast(data.error || "Erreur lors de la suppression", 'error')
             }
         } catch (e) {
             console.error(e)
@@ -192,8 +196,10 @@ export default function UsersPage() {
                 body: JSON.stringify({ role: newRole })
             })
             if (res.ok) {
+                const updated = await res.json()
+                // Update locale
+                setUsers(current => current.map(u => u.id === id ? { ...u, role: newRole } : u))
                 toast(`Rôle mis à jour : ${newRole}`, 'success')
-                fetchUsers()
             } else {
                 toast("Impossible de modifier le rôle", 'error')
             }

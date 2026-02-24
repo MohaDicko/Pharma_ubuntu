@@ -60,6 +60,21 @@ async function main() {
         console.log(`✅ Created products.`)
     }
 
+    // 3. Create Insurances
+    const insuranceCount = await prisma.insurance.count()
+    if (insuranceCount === 0) {
+        await prisma.insurance.createMany({
+            data: [
+                { name: 'INPS', code: 'INPS', percentage: 70 },
+                { name: 'CANAM (AMO)', code: 'CANAM', percentage: 70 },
+                { name: 'NSIA Assurances', code: 'NSIA', percentage: 80 },
+                { name: 'SUNU Assurances', code: 'SUNU', percentage: 80 },
+                { name: 'SAHAM', code: 'SAHAM', percentage: 80 },
+            ],
+        })
+        console.log('✅ Insurances seeded.')
+    }
+
     console.log('Seeding finished.')
 }
 
