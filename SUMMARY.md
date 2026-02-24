@@ -1,4 +1,4 @@
-# 🏥 Sahel CPMS - Système de Gestion de Pharmacie Clinique
+# 🏥 Ubuntu - Système de Gestion de Pharmacie Clinique
 
 **Version:** 0.1.0 - Grade Industriel (MVP Seed)
 **Date:** 15 Février 2026
@@ -50,7 +50,7 @@ Invoke-WebRequest -Uri http://localhost:3000/api/seed -Method POST
 ## 🏗️ Structure Technique
 
 ```
-sahel-store/
+ubuntu-pharm/
 ├── apps/
 │   ├── web/                 # Frontend Next.js (Dashboard, POS, Inventory)
 │   │   ├── app/api/         # API Routes (Products, Seed, Auth)

@@ -55,7 +55,7 @@ export default function LoginPage() {
                             </div>
                         </div>
                         <h2 className="text-3xl font-bold text-slate-900">Bienvenue</h2>
-                        <p className="text-slate-500 mt-2">Identifiez-vous pour accéder au Sahel CPMS</p>
+                        <p className="text-slate-500 mt-2">Identifiez-vous pour accéder au portail Ubuntu</p>
                     </div>
 
                     <form action={dispatch} className="space-y-6">

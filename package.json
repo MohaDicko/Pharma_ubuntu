@@ -1,5 +1,5 @@
 {
-  "name": "sahel-clinical-pharmacy",
+  "name": "ubuntu-clinical-pharmacy",
   "version": "0.1.0",
   "packageManager": "npm@10.2.4",
   "private": true,

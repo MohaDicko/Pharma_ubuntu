@@ -20,6 +20,7 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { generateInventoryPDF } from "@/lib/pdf-reports"
+import { useCsvExport } from "@/hooks/useCsvExport"
 import { PageShell } from "@/components/PageShell"
 
 interface InventoryReport {
@@ -37,6 +38,7 @@ export default function ReportsPage() {
     const { user } = useAuth()
     const [report, setReport] = useState<InventoryReport | null>(null)
     const [loading, setLoading] = useState(true)
+    const { downloadCsv } = useCsvExport()
 
     useEffect(() => {
         async function fetchReport() {
@@ -55,6 +57,17 @@ export default function ReportsPage() {
         fetchReport()
     }, [])
 
+    const handleExportCsv = () => {
+        if (!report) return;
+        const data = report.lowStockProducts.map(p => ({
+            Produit: p.name,
+            Stock: p.currentQty,
+            Seuil: p.minThreshold,
+            Statut: p.currentQty === 0 ? 'RUPTURE' : 'BAS'
+        }));
+        downloadCsv(data, `rapport-stock-${new Date().toISOString().split('T')[0]}.csv`);
+    }
+
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -62,7 +75,12 @@ export default function ReportsPage() {
         </div>
     )
 
-    if (!report) return <div>Accès refusé ou erreur.</div>
+    if (!report) return (
+        <div className="p-10 text-center">
+            <h2 className="text-xl font-bold text-rose-600">Accès restreint</h2>
+            <p className="text-slate-500">Vous devez être Administrateur pour consulter ces rapports détaillés.</p>
+        </div>
+    )
 
     return (
         <PageShell>
@@ -76,7 +94,7 @@ export default function ReportsPage() {
                     <p className="text-slate-500 mt-1 text-sm">Vue d&apos;ensemble de la santé financière et logistique.</p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                    <Button variant="outline" className="gap-2 shadow-sm">
+                    <Button variant="outline" className="gap-2 shadow-sm" onClick={handleExportCsv}>
                         <Download className="h-4 w-4" /> Export CSV
                     </Button>
                     <Button

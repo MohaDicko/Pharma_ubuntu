@@ -20,6 +20,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, FileDown, ArrowUpRight, ArrowDownLeft, RefreshCw, Loader2 } from "lucide-react"
+import { useCsvExport } from "@/hooks/useCsvExport"
+
 
 interface Transaction {
     id: string
@@ -35,6 +37,7 @@ export default function TransactionsList() {
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState("")
+    const { downloadCsv } = useCsvExport()
 
     async function fetchTransactions() {
         setLoading(true)
@@ -58,6 +61,19 @@ export default function TransactionsList() {
         fetchTransactions()
     }, [])
 
+    const handleExportCsv = () => {
+        const data = transactions.map(t => ({
+            ID: t.id,
+            Date: new Date(t.date).toLocaleString(),
+            Type: t.type,
+            Montant: t.amount,
+            Methode: t.paymentMethod,
+            Produits: t.products,
+            Statut: t.status
+        }));
+        downloadCsv(data, `transactions-${new Date().toISOString().split('T')[0]}.csv`);
+    }
+
     const filteredTransactions = transactions.filter(t =>
         t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.products.toLowerCase().includes(searchTerm.toLowerCase())
@@ -77,9 +93,10 @@ export default function TransactionsList() {
                         <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                         Actualiser
                     </Button>
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={handleExportCsv} disabled={transactions.length === 0}>
                         <FileDown className="mr-2 h-4 w-4" /> Export CSV
                     </Button>
+
                 </div>
             </div>
 

@@ -1,4 +1,4 @@
-# 🚀 Guide de Déploiement Production - Sahel Ubuntu Pharm
+# 🚀 Guide de Déploiement Production - Ubuntu Pharm
 
 Ce guide explique comment préparer et déployer l'application en environnement de production, avec un focus particulier sur **Vercel** et les bonnes pratiques de sécurité.
 

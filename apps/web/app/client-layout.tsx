@@ -21,7 +21,7 @@ function LoadingScreen({ message = "Initialisation..." }: { message?: string }) 
                 </div>
                 <div className="text-center space-y-1">
                     <p className="text-sm font-semibold text-slate-700">{message}</p>
-                    <p className="text-xs text-slate-400">Sahel CPMS</p>
+                    <p className="text-xs text-slate-400">Ubuntu</p>
                 </div>
             </div>
         </div>
@@ -55,7 +55,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                         <div className="bg-primary/10 p-1.5 rounded-lg shrink-0">
                             <CabinetUbuntuLogo className="h-5 w-5 text-primary" />
                         </div>
-                        <span className="text-sm lg:text-base font-bold text-primary truncate">Sahel CPMS</span>
+                        <span className="text-sm lg:text-base font-bold text-primary truncate">Ubuntu CPMS</span>
                     </div>
                     <ScrollArea className="flex-1 py-3">
                         <div className="px-2 lg:px-3">

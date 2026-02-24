@@ -26,7 +26,7 @@ export function MobileNav() {
     const pathname = usePathname()
     const { user } = useAuth()
 
-    const pageTitle = PAGE_TITLES[pathname] || "Sahel CPMS"
+    const pageTitle = PAGE_TITLES[pathname] || "Ubuntu"
     const isPos = pathname === "/pos"
 
     return (
@@ -89,7 +89,7 @@ export function MobileNav() {
                         <div className="bg-primary/10 p-1.5 rounded-lg">
                             <Hospital className="h-4 w-4 text-primary" />
                         </div>
-                        <span className="font-black text-slate-900 text-sm">Sahel CPMS</span>
+                        <span className="font-black text-slate-900 text-sm">Ubuntu CPMS</span>
                     </div>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsOpen(false)}>
                         <X className="h-4 w-4" />

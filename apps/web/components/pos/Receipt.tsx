@@ -166,7 +166,7 @@ export const Receipt = React.forwardRef<HTMLDivElement, ReceiptProps>(({
                 </div>
                 <p className="text-[8px] mt-1 tracking-widest">{transactionId.toUpperCase()}</p>
 
-                <p className="mt-3 text-[8px] text-gray-400">Powered by Sahel Ubuntu Pharm</p>
+                <p className="mt-3 text-[8px] text-gray-400">Propulsé par Ubuntu CPMS</p>
             </div>
         </div>
     );

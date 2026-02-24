@@ -45,7 +45,7 @@ export default function SettingsPage() {
                         <CardContent className="space-y-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="storeName">Nom de l&apos;établissement</Label>
-                                <Input id="storeName" defaultValue="Pharmacie Clinique du Sahel" />
+                                <Input id="storeName" defaultValue="Ubuntu CPMS" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">

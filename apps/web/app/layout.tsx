@@ -9,16 +9,16 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
     title: {
-        default: "Cabinet Ubuntu Pharm",
-        template: "%s | Ubuntu Pharm"
+        default: "Cabinet Ubuntu CPMS",
+        template: "%s | Ubuntu CPMS"
     },
     description: "Système de Gestion Pharmaceutique Optimisé - Cabinet Ubuntu",
-    keywords: ["pharmacie", "gestion de stock", "Mali", "Sahel", "POS", "santé"],
+    keywords: ["pharmacie", "gestion de stock", "Mali", "Ubuntu", "POS", "santé"],
     manifest: "/manifest.json",
     appleWebApp: {
         capable: true,
         statusBarStyle: "default",
-        title: "Ubuntu Pharm",
+        title: "Ubuntu CPMS",
     },
 }
 

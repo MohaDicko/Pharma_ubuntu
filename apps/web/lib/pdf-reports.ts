@@ -1,11 +1,11 @@
 import { format } from 'date-fns';
 
 export const generateInventoryPDF = async (report: any) => {
-    // Import dynamique pour éviter les erreurs SSR (window is not defined)
+    // Import dynamique pour éviter les erreurs SSR
     const { default: jsPDF } = await import('jspdf');
-    await import('jspdf-autotable');
+    const { default: autoTable } = await import('jspdf-autotable');
 
-    const doc = new jsPDF() as any;
+    const doc = new jsPDF();
     const dateStr = format(new Date(), 'dd/MM/yyyy HH:mm');
 
     // 1. En-tête
@@ -14,7 +14,7 @@ export const generateInventoryPDF = async (report: any) => {
 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
-    doc.text('CABINET UBUNTU - SAHEL PHARM', 105, 20, { align: 'center' });
+    doc.text('CABINET UBUNTU - PHARM', 105, 20, { align: 'center' });
 
     doc.setFontSize(10);
     doc.text('RAPPORT D\'INVENTAIRE ET VALORISATION DU STOCK', 105, 30, { align: 'center' });
@@ -26,7 +26,7 @@ export const generateInventoryPDF = async (report: any) => {
     doc.setFont('helvetica', 'bold');
     doc.text('RÉSUMÉ EXÉCUTIF', 14, 55);
 
-    doc.autoTable({
+    autoTable(doc, {
         startY: 60,
         head: [['Indicateur', 'Valeur']],
         body: [
@@ -40,9 +40,9 @@ export const generateInventoryPDF = async (report: any) => {
     });
 
     // 3. Table des Ruptures
-    doc.text('PRODUITS EN ALERTE STOCK', 14, doc.lastAutoTable.finalY + 15);
-    doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 20,
+    doc.text('PRODUITS EN ALERTE STOCK', 14, (doc as any).lastAutoTable.finalY + 15);
+    autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 20,
         head: [['Produit', 'Stock Actuel', 'Seuil Alerte', 'Status']],
         body: report.lowStockProducts.map((p: any) => [
             p.name,
@@ -54,9 +54,9 @@ export const generateInventoryPDF = async (report: any) => {
     });
 
     // 4. Table des Péremptions
-    doc.text('SUIVI DES PÉREMPTIONS (Période 6 mois)', 14, doc.lastAutoTable.finalY + 15);
-    doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 20,
+    doc.text('SUIVI DES PÉREMPTIONS (Période 6 mois)', 14, (doc as any).lastAutoTable.finalY + 15);
+    autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 20,
         head: [['Produit', 'Quantité', 'Date Péremption', 'Urgence']],
         body: report.expiringSoon.map((b: any) => [
             b.product,

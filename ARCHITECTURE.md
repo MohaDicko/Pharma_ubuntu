@@ -1,4 +1,4 @@
-# 🏗️ Architecture & Stack Technique - Sahel CPMS
+# 🏗️ Architecture & Stack Technique - Ubuntu Pharm
 
 Ce document décrit en détail les choix techniques, l'architecture logicielle et les standards de développement adoptés pour le **Clinical Pharmacy Management System (CPMS)**.
 
@@ -37,7 +37,7 @@ L'interface utilisateur vise un standard "Premium / Industriel" : propre, réact
 Le projet est structuré comme suit :
 
 ```bash
-sahel-store/
+ubuntu-pharm/
 ├── apps/                          # Applications exécutables
 │   ├── web/                       # Frontend (Next.js) - Port 3000
 │   │   ├── app/                   # App Router (Pages & API Routes)

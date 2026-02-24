@@ -2,10 +2,17 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { DollarSign, Activity, AlertTriangle, PackageSearch, Loader2, TrendingUp, ShoppingCart, Users, Clock } from "lucide-react"
+import {
+    DollarSign, Activity, AlertTriangle, PackageSearch, Loader2,
+    TrendingUp, ShoppingCart, Users, Clock, PieChart as PieIcon
+} from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import {
+    ResponsiveContainer, BarChart, Bar, XAxis, YAxis,
+    CartesianGrid, Tooltip, PieChart, Pie, Cell, ResponsiveContainer as ResponsiveContainerType
+} from 'recharts'
 
 interface DashboardStats {
     revenueToday: number
@@ -20,20 +27,27 @@ interface DashboardStats {
     }>
 }
 
+interface ReportData {
+    trends: Array<{ name: string, ventes: number }>
+    payments: Array<{ name: string, value: number }>
+}
+
+const COLORS = ['#10b981', '#6366f1', '#f59e0b', '#3b82f6'];
+
 function StatCard({ title, value, subtitle, icon: Icon, color }: {
     title: string, value: string, subtitle: string,
     icon: React.ElementType, color: string
 }) {
     return (
-        <Card className={`hover:shadow-md transition-all border-l-4 ${color}`}>
+        <Card className={`hover:shadow-lg transition-all duration-300 border-l-4 ${color} group cursor-default`}>
             <CardContent className="p-4 sm:p-5">
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">{title}</p>
-                        <p className="text-xl sm:text-2xl font-black mt-1 text-slate-900 truncate">{value}</p>
-                        <p className="text-[11px] text-muted-foreground mt-1 truncate">{subtitle}</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest truncate">{title}</p>
+                        <p className="text-xl sm:text-2xl font-black mt-1 text-slate-900 truncate group-hover:text-primary transition-colors">{value}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1 truncate font-medium">{subtitle}</p>
                     </div>
-                    <div className={`p-2.5 rounded-xl shrink-0 ${color.replace('border-l-', 'bg-').replace('-500', '-100').replace('-600', '-100')}`}>
+                    <div className={`p-2.5 rounded-2xl shrink-0 group-hover:scale-110 transition-transform ${color.replace('border-l-', 'bg-').replace('-500', '-100').replace('-600', '-100')}`}>
                         <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${color.replace('border-l-', 'text-')}`} />
                     </div>
                 </div>
@@ -45,19 +59,26 @@ function StatCard({ title, value, subtitle, icon: Icon, color }: {
 export default function DashboardOverview() {
     const { user } = useAuth()
     const [stats, setStats] = useState<DashboardStats | null>(null)
+    const [reports, setReports] = useState<ReportData | null>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        (async () => {
+        const fetchData = async () => {
             try {
-                const res = await fetch('/api/dashboard/stats')
-                if (res.ok) setStats(await res.json())
+                const [statsRes, reportsRes] = await Promise.all([
+                    fetch('/api/dashboard/stats'),
+                    fetch('/api/dashboard/reports')
+                ])
+
+                if (statsRes.ok) setStats(await statsRes.json())
+                if (reportsRes.ok) setReports(await reportsRes.json())
             } catch (e) {
-                console.error("Dashboard stats error:", e)
+                console.error("Dashboard data error:", e)
             } finally {
                 setLoading(false)
             }
-        })()
+        }
+        fetchData()
     }, [])
 
     const isAdmin = user?.role === 'ADMIN'
@@ -66,9 +87,12 @@ export default function DashboardOverview() {
 
     if (loading) {
         return (
-            <div className="flex h-[50vh] items-center justify-center gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="text-base font-medium text-muted-foreground">Chargement...</span>
+            <div className="flex h-[60vh] flex-col items-center justify-center gap-4">
+                <div className="relative">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" strokeWidth={1.5} />
+                    <div className="absolute inset-0 rounded-full border-4 border-primary/10" />
+                </div>
+                <span className="text-base font-bold text-slate-500 animate-pulse">Synchronisation des données...</span>
             </div>
         )
     }
@@ -80,207 +104,241 @@ export default function DashboardOverview() {
     const expires = stats?.expiringBatches || []
 
     return (
-        <div className="space-y-4 sm:space-y-6">
-            {/* En-tête */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="space-y-6 pb-10">
+            {/* En-tête Dynamique */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border shadow-sm">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
+                    <h1 className="text-3xl font-black tracking-tight text-slate-900 bg-gradient-to-r from-slate-900 to-primary bg-clip-text">
                         Bonjour, {user?.name.split(' ')[0]} 👋
                     </h1>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm font-medium text-slate-500 mt-1 flex items-center gap-2">
+                        <Clock className="h-3.5 w-3.5 text-primary" />
                         {new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
                 </div>
-                {/* Raccourci rapide selon rôle */}
                 {(isCashier || isPharmacist || isAdmin) && (
                     <Link href="/pos">
-                        <Button className="w-full sm:w-auto shadow-lg">
-                            <ShoppingCart className="h-4 w-4 mr-2" />
-                            Nouvelle Vente
+                        <Button className="w-full sm:w-auto h-12 px-6 shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all rounded-2xl gap-2 font-bold text-base">
+                            <ShoppingCart className="h-5 w-5" />
+                            Vendre Maintenant
                         </Button>
                     </Link>
                 )}
             </div>
 
-            {/* ── KPI Cards — adaptées selon le rôle ───────────────────── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                {/* Visible par tous */}
+            {/* ── KPI Cards ───────────────────── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
-                    title="CA Aujourd'hui"
+                    title="Revenus"
                     value={`${revenue.toLocaleString()} F`}
-                    subtitle="Ventes de la journée"
+                    subtitle="CA encaissé aujourd'hui"
                     icon={DollarSign}
                     color="border-l-emerald-500"
                 />
-
-                {/* Visible ADMIN + PHARMACIST uniquement */}
                 {(isAdmin || isPharmacist) && (
                     <StatCard
-                        title="Valeur du Stock"
+                        title="Valeur Stock"
                         value={`${stockValue.toLocaleString()} F`}
-                        subtitle="PAMP — Prix moyen"
+                        subtitle="Évaluation totale PAMP"
                         icon={Activity}
                         color="border-l-blue-500"
                     />
                 )}
-
-                {/* Ruptures — visible par tous, mais seulement utile à ADMIN/PHARMACIST */}
                 <StatCard
-                    title="Ruptures"
+                    title="Alertes"
                     value={`${outOfStock}`}
-                    subtitle={outOfStock > 0 ? "Action requise !" : "Tout est OK ✓"}
+                    subtitle={outOfStock > 0 ? "Ruptures à traiter" : "Inventaire optimal"}
                     icon={AlertTriangle}
                     color={outOfStock > 0 ? "border-l-rose-500" : "border-l-emerald-400"}
                 />
-
-                {/* Catalogue — ADMIN + PHARMACIST */}
                 {(isAdmin || isPharmacist) && (
                     <StatCard
-                        title="Références"
+                        title="Catalogue"
                         value={`${stockCount}`}
-                        subtitle="Produits au catalogue"
+                        subtitle="Références actives"
                         icon={PackageSearch}
-                        color="border-l-violet-500"
+                        color="border-l-indigo-500"
                     />
                 )}
-
-                {/* Card POS rapide pour CASHIER */}
-                {isCashier && (
-                    <Card className="border-l-4 border-l-primary bg-primary/5 col-span-1">
-                        <CardContent className="p-4 sm:p-5">
-                            <p className="text-xs font-semibold text-primary uppercase tracking-wider">Accès Rapide</p>
-                            <p className="text-base font-black mt-1 text-slate-900">Point de Vente</p>
-                            <p className="text-[11px] text-muted-foreground mt-1">Encaisser les ventes</p>
-                        </CardContent>
-                    </Card>
-                )}
             </div>
 
-            {/* ── Contenu conditionnel par rôle ──────────────────────────── */}
-            <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+            {/* ── Graphiques & Reports ──────────────────────────── */}
+            <div className="grid gap-6 grid-cols-1 lg:grid-cols-7">
 
-                {/* Graphique tendances — ADMIN seulement */}
+                {/* Graphique Tendances */}
                 {(isAdmin || isPharmacist) && (
-                    <Card className="col-span-1 lg:col-span-4">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                                <TrendingUp className="h-5 w-5 text-primary" />
-                                Tendances Ventes vs Achats
-                            </CardTitle>
+                    <Card className="col-span-1 lg:col-span-4 rounded-3xl overflow-hidden border-none shadow-md">
+                        <CardHeader className="bg-slate-50/50 border-b pb-4">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2 text-lg font-black text-slate-800">
+                                        <TrendingUp className="h-5 w-5 text-primary" />
+                                        Performance (7 jours)
+                                    </CardTitle>
+                                    <CardDescription>Évolution des ventes quotidiennes</CardDescription>
+                                </div>
+                                <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none px-3 font-bold">
+                                    En hausse 📈
+                                </Badge>
+                            </div>
                         </CardHeader>
-                        <CardContent>
-                            <div className="h-[180px] sm:h-[220px] flex flex-col items-center justify-center bg-slate-50 rounded-xl border border-dashed border-slate-200 gap-2">
-                                <TrendingUp className="h-10 w-10 text-slate-200" />
-                                <span className="text-sm text-muted-foreground text-center px-4">
-                                    Graphique disponible après 7 jours de données
-                                </span>
+                        <CardContent className="pt-6">
+                            <div className="h-[280px] w-full">
+                                {reports?.trends && reports.trends.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={reports.trends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                            <XAxis
+                                                dataKey="name"
+                                                axisLine={false}
+                                                tickLine={false}
+                                                tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+                                                dy={10}
+                                            />
+                                            <YAxis
+                                                axisLine={false}
+                                                tickLine={false}
+                                                tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+                                            />
+                                            <Tooltip
+                                                cursor={{ fill: '#f8fafc' }}
+                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 800 }}
+                                            />
+                                            <Bar
+                                                dataKey="ventes"
+                                                fill="#3b82f6"
+                                                radius={[6, 6, 0, 0]}
+                                                barSize={32}
+                                            />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
+                                        <TrendingUp className="h-10 w-10 opacity-20" />
+                                        <p className="text-xs font-medium">Pas assez de données pour le moment</p>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
                 )}
 
-                {/* Alertes Péremption — ADMIN + PHARMACIST */}
-                {(isAdmin || isPharmacist) && (
-                    <Card className={`col-span-1 lg:col-span-3 ${expires.length > 0 ? 'border-orange-200 bg-orange-50/30' : ''}`}>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-base sm:text-lg flex items-center gap-2 text-orange-700">
-                                <AlertTriangle className="h-5 w-5" />
-                                Alertes Péremption
-                            </CardTitle>
-                            <CardDescription>Lots expirant dans les 30 jours (méthode FEFO)</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {expires.length === 0 ? (
-                                <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 p-3 rounded-lg border border-emerald-200">
-                                    <Activity className="h-4 w-4 shrink-0" />
-                                    <span>Aucun produit critique. Bonne gestion !</span>
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {expires.slice(0, 5).map((batch, i) => {
-                                        const daysLeft = Math.ceil((new Date(batch.expiryDate).getTime() - Date.now()) / (1000 * 3600 * 24))
-                                        return (
-                                            <div key={i} className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-orange-100 gap-2">
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-semibold text-slate-900 truncate">{batch.productName}</p>
-                                                    <p className="text-[11px] text-slate-400">Lot {batch.batchNumber}</p>
-                                                </div>
-                                                <div className="text-right shrink-0">
-                                                    <span className={`text-xs font-black px-2 py-1 rounded-full
-                                                        ${daysLeft <= 7 ? 'bg-rose-100 text-rose-700' :
-                                                            daysLeft <= 15 ? 'bg-orange-100 text-orange-700' :
-                                                                'bg-amber-100 text-amber-700'}`}>
-                                                        J-{daysLeft}
-                                                    </span>
-                                                    <p className="text-[11px] text-slate-400 mt-0.5">Qté: {batch.quantity}</p>
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                    {expires.length > 5 && (
-                                        <p className="text-xs text-center text-slate-400 pt-1">+ {expires.length - 5} autre(s) lot(s)</p>
-                                    )}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Vue caissier — recap du jour */}
-                {isCashier && (
-                    <Card className="col-span-1 lg:col-span-7">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <Clock className="h-5 w-5 text-primary" /> Mon Activité du Jour
+                {/* Répartition Paiements ou Alertes */}
+                <div className="col-span-1 lg:col-span-3 space-y-6">
+                    {/* Répartition Modes de Payement */}
+                    <Card className="rounded-3xl border-none shadow-md overflow-hidden">
+                        <CardHeader className="bg-slate-50/50 border-b pb-4">
+                            <CardTitle className="text-lg font-black text-slate-800 flex items-center gap-2">
+                                <PieIcon className="h-5 w-5 text-indigo-500" />
+                                Modes de Règlement
                             </CardTitle>
                         </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                <div className="bg-emerald-50 rounded-xl p-4 text-center border border-emerald-100">
-                                    <p className="text-2xl font-black text-emerald-700">{revenue.toLocaleString()}</p>
-                                    <p className="text-xs text-emerald-600 mt-1 font-medium">FCFA encaissés</p>
-                                </div>
-                                <div className="bg-blue-50 rounded-xl p-4 text-center border border-blue-100">
-                                    <p className="text-2xl font-black text-blue-700">—</p>
-                                    <p className="text-xs text-blue-600 mt-1 font-medium">Transactions du jour</p>
-                                </div>
-                                <div className="col-span-2 sm:col-span-1 bg-slate-50 rounded-xl p-4 text-center border border-slate-100">
-                                    <Link href="/pos">
-                                        <Button className="w-full">
-                                            <ShoppingCart className="h-4 w-4 mr-2" /> Encaisser
-                                        </Button>
-                                    </Link>
-                                </div>
+                        <CardContent className="pt-6">
+                            <div className="h-[180px]">
+                                {reports?.payments && reports.payments.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={reports.payments}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={60}
+                                                outerRadius={80}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                            >
+                                                {reports.payments.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-slate-300 gap-2 border-2 border-dashed rounded-2xl">
+                                        <DollarSign className="h-8 w-8 opacity-20" />
+                                        <p className="text-[10px] font-bold uppercase tracking-wider">Aucune transaction today</p>
+                                    </div>
+                                )}
+                            </div>
+                            {/* Legend simple */}
+                            <div className="mt-4 grid grid-cols-2 gap-2">
+                                {reports?.payments.map((p, i) => (
+                                    <div key={i} className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100">
+                                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-bold text-slate-900 truncate">{p.name}</p>
+                                            <p className="text-[9px] text-slate-400 font-medium">{p.value.toLocaleString()} F</p>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </CardContent>
                     </Card>
-                )}
+
+                    {/* Alertes Péremption */}
+                    {(isAdmin || isPharmacist) && expires.length > 0 && (
+                        <Card className="rounded-3xl border-none shadow-md bg-rose-50 border border-rose-100">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-black flex items-center gap-2 text-rose-700">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    Priorité FEFO (Péremptions)
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                {expires.slice(0, 3).map((batch, i) => (
+                                    <div key={i} className="flex items-center justify-between bg-white p-3 rounded-2xl shadow-sm gap-2">
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-bold text-slate-900 truncate">{batch.productName}</p>
+                                            <p className="text-[10px] text-slate-400">Lot {batch.batchNumber}</p>
+                                        </div>
+                                        <Badge variant="destructive" className="font-black text-[10px] px-2 py-0.5 rounded-lg">
+                                            J-{Math.ceil((new Date(batch.expiryDate).getTime() - Date.now()) / (1000 * 3600 * 24))}
+                                        </Badge>
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
             </div>
 
-            {/* Lien inventaire pour ADMIN et PHARMACIST */}
+            {/* Section Rôles & Admin */}
             {isAdmin && (
-                <Card className="bg-slate-900 text-white border-none">
-                    <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <div>
-                            <p className="font-bold text-base flex items-center gap-2">
-                                <Users className="h-5 w-5 text-primary" /> Administration système
-                            </p>
-                            <p className="text-sm text-slate-400 mt-0.5">Gérez les utilisateurs, stocks, transactions et rapports</p>
-                        </div>
-                        <div className="flex gap-2 w-full sm:w-auto">
-                            <Link href="/users" className="flex-1 sm:flex-none">
-                                <Button variant="outline" className="w-full bg-transparent border-slate-700 text-white hover:bg-slate-800">
-                                    Utilisateurs
-                                </Button>
-                            </Link>
-                            <Link href="/reports" className="flex-1 sm:flex-none">
-                                <Button variant="outline" className="w-full bg-transparent border-slate-700 text-white hover:bg-slate-800">
-                                    Rapports
-                                </Button>
-                            </Link>
-                        </div>
-                    </CardContent>
-                </Card>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Card className="bg-slate-900 text-white border-none rounded-3xl p-6 relative overflow-hidden group">
+                        <Users className="absolute -right-4 -bottom-4 h-32 w-32 text-white/5 group-hover:scale-125 transition-transform duration-500" />
+                        <h3 className="text-lg font-black mb-1">Équipe & Accès</h3>
+                        <p className="text-xs text-slate-400 mb-6">Gérez les permissions et rôles.</p>
+                        <Link href="/users">
+                            <Button variant="outline" className="w-full bg-white/10 border-white/20 text-white hover:bg-white hover:text-slate-900 font-bold rounded-xl">
+                                Voir les Utilisateurs
+                            </Button>
+                        </Link>
+                    </Card>
+
+                    <Card className="bg-primary text-white border-none rounded-3xl p-6 relative overflow-hidden group">
+                        <Activity className="absolute -right-4 -bottom-4 h-32 w-32 text-white/5 group-hover:scale-125 transition-transform duration-500" />
+                        <h3 className="text-lg font-black mb-1">Audit & Sécurité</h3>
+                        <p className="text-xs text-white/60 mb-6">Tracez chaque action système.</p>
+                        <Link href="/audit">
+                            <Button variant="outline" className="w-full bg-white/10 border-white/20 text-white hover:bg-white hover:text-primary font-bold rounded-xl">
+                                Consulter l&apos;Audit
+                            </Button>
+                        </Link>
+                    </Card>
+
+                    <Card className="bg-slate-100 border-none rounded-3xl p-6 relative overflow-hidden group md:col-span-2 lg:col-span-1">
+                        <DollarSign className="absolute -right-4 -bottom-4 h-32 w-32 text-slate-200 group-hover:scale-125 transition-transform duration-500" />
+                        <h3 className="text-lg font-black text-slate-800 mb-1">Rapports Complets</h3>
+                        <p className="text-xs text-slate-500 mb-6">Historique financier détaillé.</p>
+                        <Link href="/transactions">
+                            <Button className="w-full font-bold rounded-xl">
+                                Archivage Transactions
+                            </Button>
+                        </Link>
+                    </Card>
+                </div>
             )}
         </div>
     )

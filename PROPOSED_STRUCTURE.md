@@ -7,7 +7,7 @@ Nous utiliserons **Turborepo** pour gérer ce monorepo, car il est natif à l'é
 ## Structure des Dossiers
 
 ```
-sahel-clinical-pharmacy/
+ubuntu-clinical-pharmacy/
 ├── apps/
 │   ├── api/                 # Backend NestJS (Hexagonal Architecture)
 │   │   ├── src/
