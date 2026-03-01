@@ -25,6 +25,7 @@ export declare class StockService {
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.Status;
         createdAt: Date;
         name: string;
         dci: string;

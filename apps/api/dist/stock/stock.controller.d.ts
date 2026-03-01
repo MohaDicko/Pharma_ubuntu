@@ -15,6 +15,7 @@ export declare class StockController {
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.Status;
         createdAt: Date;
         name: string;
         dci: string;

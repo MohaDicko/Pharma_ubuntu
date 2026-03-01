@@ -13,6 +13,7 @@ import {
     ChevronRight,
     Loader2
 } from "lucide-react"
+import { toast } from "@/components/ui/toast"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -38,6 +39,7 @@ export default function ReportsPage() {
     const { user } = useAuth()
     const [report, setReport] = useState<InventoryReport | null>(null)
     const [loading, setLoading] = useState(true)
+    const [isPdfLoading, setIsPdfLoading] = useState(false)
     const { downloadCsv } = useCsvExport()
 
     useEffect(() => {
@@ -59,13 +61,29 @@ export default function ReportsPage() {
 
     const handleExportCsv = () => {
         if (!report) return;
-        const data = report.lowStockProducts.map(p => ({
-            Produit: p.name,
-            Stock: p.currentQty,
-            Seuil: p.minThreshold,
-            Statut: p.currentQty === 0 ? 'RUPTURE' : 'BAS'
-        }));
+        const data = [
+            // Produits en alerte
+            ...report.lowStockProducts.map(p => ({
+                Section: 'ALERTE STOCK',
+                Produit: p.name,
+                Stock_Actuel: p.currentQty,
+                Seuil_Alerte: p.minThreshold,
+                Statut: p.currentQty === 0 ? 'RUPTURE' : 'BAS',
+                Date_Peremption: '',
+            })),
+            // Lots en péremption
+            ...report.expiringSoon.map(b => ({
+                Section: 'PEREMPTION',
+                Produit: b.product,
+                Stock_Actuel: b.qty,
+                Seuil_Alerte: '',
+                Statut: b.status,
+                Date_Peremption: new Date(b.expiryDate).toLocaleDateString('fr-FR'),
+            })),
+        ];
+        if (data.length === 0) { toast('Aucune donnée à exporter', 'warning'); return; }
         downloadCsv(data, `rapport-stock-${new Date().toISOString().split('T')[0]}.csv`);
+        toast('Export CSV lancé !', 'success');
     }
 
     if (loading) return (
@@ -98,10 +116,27 @@ export default function ReportsPage() {
                         <Download className="h-4 w-4" /> Export CSV
                     </Button>
                     <Button
-                        onClick={async () => report && await generateInventoryPDF(report)}
+                        onClick={async () => {
+                            if (!report) return;
+                            setIsPdfLoading(true);
+                            try {
+                                await generateInventoryPDF(report);
+                                toast('Rapport PDF généré !', 'success');
+                            } catch (e) {
+                                console.error('PDF Error:', e);
+                                toast('Erreur lors de la génération du PDF', 'error');
+                            } finally {
+                                setIsPdfLoading(false);
+                            }
+                        }}
+                        disabled={isPdfLoading || !report}
                         className="gap-2 shadow-lg hover:translate-y-[-2px] transition-transform"
                     >
-                        <FileText className="h-4 w-4" /> Rapport PDF Complet
+                        {isPdfLoading
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <FileText className="h-4 w-4" />
+                        }
+                        Rapport PDF Complet
                     </Button>
                 </div>
             </div>

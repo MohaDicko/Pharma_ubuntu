@@ -9,6 +9,7 @@ import {
 import { useAuth } from "@/hooks/useAuth"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis,
     CartesianGrid, Tooltip, PieChart, Pie, Cell, ResponsiveContainer as ResponsiveContainerType

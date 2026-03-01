@@ -12,7 +12,9 @@ import {
     CreditCard,
     ClipboardList,
     LogOut,
-    ShieldCheck
+    ShieldCheck,
+    Building2,
+    TrendingUp
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -37,7 +39,7 @@ export function Sidebar({ className, onClick, ...props }: SidebarProps) {
             title: "Point de Vente",
             href: "/pos",
             icon: CreditCard,
-            roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] // Le caissier encaisse !
+            roles: ['ADMIN', 'PHARMACIST', 'CASHIER']
         },
         {
             title: "Stocks & Lots",
@@ -49,7 +51,25 @@ export function Sidebar({ className, onClick, ...props }: SidebarProps) {
             title: "Transactions",
             href: "/transactions",
             icon: ClipboardList,
-            roles: ['ADMIN']
+            roles: ['ADMIN', 'PHARMACIST']
+        },
+        {
+            title: "Assurances",
+            href: "/insurances",
+            icon: Building2,
+            roles: ['ADMIN', 'PHARMACIST']
+        },
+        {
+            title: "Analyses & Rapports",
+            href: "/reports",
+            icon: BarChart4,
+            roles: ['ADMIN', 'PHARMACIST']
+        },
+        {
+            title: "Rapport Financier",
+            href: "/reports/financial",
+            icon: TrendingUp,
+            roles: ['ADMIN', 'PHARMACIST']
         },
         {
             title: "Utilisateurs",
@@ -61,12 +81,6 @@ export function Sidebar({ className, onClick, ...props }: SidebarProps) {
             title: "Sécurité & Audit",
             href: "/audit",
             icon: ShieldCheck,
-            roles: ['ADMIN']
-        },
-        {
-            title: "Analyses & Rapports",
-            href: "/reports",
-            icon: BarChart4,
             roles: ['ADMIN']
         },
         {

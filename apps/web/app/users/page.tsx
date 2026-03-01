@@ -211,8 +211,8 @@ export default function UsersPage() {
 
     const filteredUsers = useMemo(() =>
         users.filter(u =>
-            u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            u.email.toLowerCase().includes(searchTerm.toLowerCase())
+            (u.name || "").toLowerCase().includes((searchTerm || "").toLowerCase()) ||
+            (u.email || "").toLowerCase().includes((searchTerm || "").toLowerCase())
         ), [users, searchTerm])
 
     return (
