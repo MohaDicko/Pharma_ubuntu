@@ -253,7 +253,7 @@ export default function UsersPage() {
                     <CardDescription>Comptes ayant accès à la plateforme.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <Table>
+                    <Table className="min-w-[800px]">
                         <TableHeader>
                             <TableRow className="bg-slate-50/30">
                                 <TableHead className="w-[80px] pl-6">Personnel</TableHead>

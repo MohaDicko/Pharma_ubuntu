@@ -177,7 +177,7 @@ export default function InsurancesPage() {
                             {isAdmin && <Button size="sm" variant="outline" onClick={openCreate}>Ajouter la première</Button>}
                         </div>
                     ) : (
-                        <Table>
+                        <Table className="min-w-[800px]">
                             <TableHeader className="bg-slate-50">
                                 <TableRow>
                                     <TableHead className="pl-6">Assureur</TableHead>

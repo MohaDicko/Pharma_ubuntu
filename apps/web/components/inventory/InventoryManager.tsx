@@ -149,7 +149,7 @@ function ProductTable({ products, loading, onEdit, onDelete, onRestock, canDelet
 
     return (
         <div className="overflow-x-auto">
-            <Table>
+            <Table className="min-w-[800px]">
                 <TableHeader className="bg-slate-50/50">
                     <TableRow>
                         <TableHead className="pl-6">Produit / DCI</TableHead>

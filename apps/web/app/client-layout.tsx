@@ -78,13 +78,12 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                     </div>
                 </aside>
 
-                {/* ─── Contenu Principal ────────────────────────────────── */}
-                <div className="flex flex-col flex-1 overflow-hidden">
-                    {/* Mobile Nav Header */}
+                {/* Mobile Nav Header */}
+                <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
                     <MobileNav />
 
                     {/* Page content — scroll interne */}
-                    <main className="flex-1 overflow-y-auto bg-slate-50/50">
+                    <main className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50/50">
                         {children}
                     </main>
                 </div>
