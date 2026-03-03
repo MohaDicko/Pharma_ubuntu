@@ -11,8 +11,9 @@ const UpdateSchema = z.object({
 });
 
 // ── PATCH : Modifier une assurance ──────────────────────────────────────────
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
+        const { id } = await params;
         const session = await auth();
         if (!session?.user || session.user.role !== 'ADMIN') {
             return NextResponse.json({ error: 'Accès restreint aux administrateurs' }, { status: 403 });
@@ -25,7 +26,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         }
 
         const updated = await prisma.insurance.update({
-            where: { id: params.id },
+            where: { id },
             data: validation.data,
         });
 
@@ -37,8 +38,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 // ── DELETE : Désactiver (soft delete) une assurance ─────────────────────────
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
+        const { id } = await params;
         const session = await auth();
         if (!session?.user || session.user.role !== 'ADMIN') {
             return NextResponse.json({ error: 'Accès restreint aux administrateurs' }, { status: 403 });
@@ -46,7 +48,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
 
         // Soft delete : on désactive plutôt que de supprimer (préserve l'historique)
         const updated = await prisma.insurance.update({
-            where: { id: params.id },
+            where: { id },
             data: { status: 'INACTIF' },
         });
 
