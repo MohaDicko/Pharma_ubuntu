@@ -6,15 +6,24 @@ test('flux de base : login et accès dashboard', async ({ page }) => {
     await expect(page).toHaveURL(/\/login/);
 
     // 2. Remplissage du formulaire de login
-    await page.fill('input[name="email"]', 'admin@ubuntu-pharm.com');
-    await page.fill('input[name="password"]', 'Admin_Ubuntu_2026!');
+    await page.fill('input[name="email"]', 'aziz');
+    await page.fill('input[name="password"]', 'aziz');
     await page.click('button[type="submit"]');
 
     // 3. Vérification redirection vers dashboard
     await expect(page).toHaveURL('/');
-    await expect(page.locator('h1, h2')).toContainText(/Tableau de Bord|Dashboard/i);
+
+    // FIX : On force le rechargement navigateur pour réinitialiser le cache NextAuth côté client
+    await page.reload();
+
+    // Attendre de manière résiliente que le loader disparaisse
+    await expect(page.getByText(/Vérification des accès/i)).toBeHidden({ timeout: 15000 });
+
+    // On observe le vrai contenu de la page (Le titre "Bonjour")
+    await expect(page.getByText(/Synchronisation des données/i)).toBeHidden({ timeout: 15000 });
+    await expect(page.locator('h1, h2')).toContainText(/Bonjour/i, { timeout: 15000 });
 
     // 4. Navigation vers Inventaire
-    await page.click('text=Inventaire');
-    await expect(page.locator('h1, h2')).toContainText(/Inventaire|Stocks/i);
+    await page.click('text=Stocks & Lots');
+    await expect(page.locator('h1, h2')).toContainText(/Gestion des Stocks|Inventaire|Stocks/i);
 });

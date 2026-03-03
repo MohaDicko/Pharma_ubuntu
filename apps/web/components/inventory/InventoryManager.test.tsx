@@ -16,9 +16,12 @@ describe('InventoryManager', () => {
                 id: '1',
                 name: 'Doliprane',
                 dci: 'Paracétamol',
+                category: 'Médicament',
+                sellingPrice: 1000,
                 stock: 50,
                 minThreshold: 10,
-                status: 'OK',
+                status: 'ACTIF',
+                inventoryStatus: 'OK',
                 nextExpiry: '2025-12-31',
                 batchesCount: 1
             }

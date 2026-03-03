@@ -8,12 +8,12 @@ import { createAuditLog } from '@/lib/audit';
 const SaleSchema = z.object({
     paymentMethod: z.enum(['CASH', 'CARD', 'INSURANCE', 'MOBILE_MONEY']).optional().default('CASH'),
     insuranceId: z.string().uuid().optional().nullable(),
-    insurancePart: z.number().nonnegative().optional(),
-    patientPart: z.number().nonnegative().optional(),
+    insurancePart: z.coerce.number().nonnegative().optional(),
+    patientPart: z.coerce.number().nonnegative().optional(),
     items: z.array(z.object({
         productId: z.string().uuid(),
-        quantity: z.number().int().positive(),
-        sellingPrice: z.union([z.number().nonnegative(), z.string().transform(val => parseFloat(val))]),
+        quantity: z.coerce.number().int().positive(),
+        sellingPrice: z.coerce.number().nonnegative().optional(), // Toléré côté frontend mais ignoré côté backend
     })).min(1, "Panier vide")
 });
 
@@ -68,6 +68,15 @@ export async function POST(req: Request) {
             });
 
             for (const item of items) {
+                // 1. FIX SÉCURITÉ : Lire le prix depuis la base de données
+                const product = await tx.product.findUnique({
+                    where: { id: item.productId }
+                });
+
+                if (!product) {
+                    throw new Error(`Produit introuvable: ${item.productId}`);
+                }
+
                 const batches = await tx.batch.findMany({
                     where: {
                         productId: item.productId,
@@ -84,10 +93,19 @@ export async function POST(req: Request) {
 
                     const deduct = Math.min(batch.quantity, remainingQtyToDeduct);
 
-                    await tx.batch.update({
-                        where: { id: batch.id },
+                    // 2. FIX RACE CONDITION : S'assurer que la quantité est toujours >= à ce qu'on déduit
+                    const updatedBatch = await tx.batch.updateMany({
+                        where: {
+                            id: batch.id,
+                            quantity: { gte: deduct }
+                        },
                         data: { quantity: { decrement: deduct } }
                     });
+
+                    // Si 0 ligne mise à jour, c'est qu'un autre processus a pris le stock dans notre dos (Race Condition)
+                    if (updatedBatch.count === 0) {
+                        throw new Error(`Conflit de stock détecté pour le lot ${batch.id}. Réessayez.`);
+                    }
 
                     await tx.stockMovement.create({
                         data: {
@@ -105,10 +123,11 @@ export async function POST(req: Request) {
                 }
 
                 if (remainingQtyToDeduct > 0) {
-                    throw new Error(`Stock insuffisant pour le produit ${item.productId}`);
+                    throw new Error(`Stock insuffisant pour le produit: ${product.name}`);
                 }
 
-                totalAmount += item.quantity * Number(item.sellingPrice);
+                // FIX SÉCURITÉ : Utilisation du vrai prix, empêchant la faille d'injection de prix par le Frontend
+                totalAmount += item.quantity * Number(product.sellingPrice);
             }
 
             await tx.transaction.update({
