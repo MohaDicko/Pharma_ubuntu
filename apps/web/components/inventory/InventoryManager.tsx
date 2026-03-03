@@ -64,8 +64,8 @@ const ProductRow = memo(({ product, onEdit, onDelete, onRestock, canDelete, canM
 }) => (
     <TableRow className="hover:bg-slate-50/50">
         <TableCell className="pl-6">
-            <div className="font-bold text-slate-900">{product.name}</div>
-            <div className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">{product.dci || '-'}</div>
+            <div className="font-bold text-slate-900 truncate max-w-[200px]" title={product.name}>{product.name}</div>
+            <div className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider truncate max-w-[150px]">{product.dci || '-'}</div>
             <div className="text-[10px] text-slate-400">{product.category}</div>
         </TableCell>
         <TableCell>
@@ -80,11 +80,11 @@ const ProductRow = memo(({ product, onEdit, onDelete, onRestock, canDelete, canM
                 {product.inventoryStatus}
             </Badge>
         </TableCell>
-        <TableCell className="font-bold text-slate-700">{product.sellingPrice.toLocaleString()} F</TableCell>
-        <TableCell>
+        <TableCell className="font-bold text-slate-700 whitespace-nowrap">{product.sellingPrice.toLocaleString()} F</TableCell>
+        <TableCell className="whitespace-nowrap">
             {product.nextExpiry ? (
                 <div className="flex items-center text-xs font-medium text-slate-600">
-                    <Calendar className="h-3 w-3 mr-1" />
+                    <Calendar className="h-3 w-3 mr-1 shrink-0" />
                     {new Date(product.nextExpiry).toLocaleDateString('fr-FR')}
                 </div>
             ) : <span className="text-slate-300 text-xs">Aucun lot</span>}
@@ -96,14 +96,14 @@ const ProductRow = memo(({ product, onEdit, onDelete, onRestock, canDelete, canM
                         size="icon" variant="ghost"
                         className="h-8 w-8 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50"
                         onClick={() => onRestock(product)}
-                        title="Approvisionner (ajouter un lot)"
+                        title="Approvisionner"
                     >
                         <ShoppingCart className="h-4 w-4" />
                     </Button>
                 )}
                 {canManage && (
                     <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-primary hover:bg-primary/5"
-                        onClick={() => onEdit(product)} title="Modifier la fiche produit">
+                        onClick={() => onEdit(product)} title="Modifier">
                         <Edit2 className="h-4 w-4" />
                     </Button>
                 )}
@@ -118,6 +118,67 @@ const ProductRow = memo(({ product, onEdit, onDelete, onRestock, canDelete, canM
     </TableRow>
 ))
 ProductRow.displayName = "ProductRow"
+
+// ─── Mobile Card View ────────────────────────────────────────────────────────
+const ProductMobileCard = memo(({ product, onEdit, onDelete, onRestock, canDelete, canManage }: {
+    product: Product,
+    onEdit: (p: Product) => void,
+    onDelete: (p: Product) => void,
+    onRestock: (p: Product) => void,
+    canDelete: boolean,
+    canManage: boolean
+}) => (
+    <div className="p-4 border-b last:border-b-0 hover:bg-slate-50/30 transition-colors">
+        <div className="flex justify-between items-start mb-3">
+            <div className="min-w-0 pr-2 overflow-hidden">
+                <h4 className="font-bold text-slate-900 truncate">{product.name}</h4>
+                <p className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider truncate">{product.dci || '-'}</p>
+                <div className="mt-1 flex flex-wrap gap-2 items-center">
+                    <Badge variant={product.inventoryStatus === 'OK' ? 'default' : 'destructive'}
+                        className={`text-[9px] px-1.5 h-4 ${product.inventoryStatus === 'OK' ? 'bg-emerald-600' :
+                            product.inventoryStatus === 'LOW' ? 'bg-amber-500' : ''
+                            }`}>
+                        {product.inventoryStatus}
+                    </Badge>
+                    <span className="text-[10px] text-slate-400 font-medium truncate">{product.category}</span>
+                </div>
+            </div>
+            <div className="text-right shrink-0">
+                <p className="font-black text-slate-800 text-sm whitespace-nowrap">{product.sellingPrice.toLocaleString()} F</p>
+                {product.nextExpiry && (
+                    <div className="flex items-center justify-end text-[10px] font-medium text-slate-500 mt-1 whitespace-nowrap">
+                        <Calendar className="h-2.5 w-2.5 mr-1 shrink-0" />
+                        {new Date(product.nextExpiry).toLocaleDateString('fr-FR')}
+                    </div>
+                )}
+            </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-2 bg-slate-50/50 p-2 rounded-xl">
+            <div className="w-full sm:flex-1">
+                <StockBar stock={product.stock} minThreshold={product.minThreshold} />
+            </div>
+            <div className="flex gap-1 w-full sm:w-auto justify-end">
+                {canManage && (
+                    <Button size="icon" variant="ghost" className="h-10 w-10 text-emerald-600 bg-emerald-50 rounded-lg" onClick={() => onRestock(product)}>
+                        <ShoppingCart className="h-5 w-5" />
+                    </Button>
+                )}
+                {canManage && (
+                    <Button size="icon" variant="ghost" className="h-10 w-10 text-blue-600 bg-blue-50 rounded-lg" onClick={() => onEdit(product)}>
+                        <Edit2 className="h-5 w-5" />
+                    </Button>
+                )}
+                {canDelete && (
+                    <Button size="icon" variant="ghost" className="h-10 w-10 text-rose-600 bg-rose-50 rounded-lg" onClick={() => onDelete(product)}>
+                        <Trash2 className="h-5 w-5" />
+                    </Button>
+                )}
+            </div>
+        </div>
+    </div>
+))
+ProductMobileCard.displayName = "ProductMobileCard"
 
 function ProductTable({ products, loading, onEdit, onDelete, onRestock, canDelete, canManage, onAddClick }: {
     products: Product[], loading: boolean,
@@ -148,28 +209,42 @@ function ProductTable({ products, loading, onEdit, onDelete, onRestock, canDelet
     )
 
     return (
-        <div className="overflow-x-auto">
-            <Table className="min-w-[800px]">
-                <TableHeader className="bg-slate-50/50">
-                    <TableRow>
-                        <TableHead className="pl-6">Produit / DCI</TableHead>
-                        <TableHead className="text-center">Stock</TableHead>
-                        <TableHead>Statut</TableHead>
-                        <TableHead>Prix Vente</TableHead>
-                        <TableHead>Proch. Péremption</TableHead>
-                        <TableHead className="text-right pr-6">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {products.map((p) => (
-                        <ProductRow
-                            key={p.id} product={p}
-                            onEdit={onEdit} onDelete={onDelete} onRestock={onRestock}
-                            canDelete={canDelete} canManage={canManage}
-                        />
-                    ))}
-                </TableBody>
-            </Table>
+        <div className="w-full">
+            {/* Vue Desktop : Tableau avec scroll horizontal si nécessaire */}
+            <div className="hidden md:block overflow-x-auto">
+                <Table className="min-w-[900px]">
+                    <TableHeader className="bg-slate-50/50">
+                        <TableRow>
+                            <TableHead className="pl-6">Produit / DCI</TableHead>
+                            <TableHead className="text-center">Stock</TableHead>
+                            <TableHead>Statut</TableHead>
+                            <TableHead>Prix Vente</TableHead>
+                            <TableHead>Proch. Péremption</TableHead>
+                            <TableHead className="text-right pr-6">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {products.map((p) => (
+                            <ProductRow
+                                key={p.id} product={p}
+                                onEdit={onEdit} onDelete={onDelete} onRestock={onRestock}
+                                canDelete={canDelete} canManage={canManage}
+                            />
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+
+            {/* Vue Mobile : Liste de cartes */}
+            <div className="md:hidden flex flex-col divide-y divide-slate-100">
+                {products.map((p) => (
+                    <ProductMobileCard
+                        key={p.id} product={p}
+                        onEdit={onEdit} onDelete={onDelete} onRestock={onRestock}
+                        canDelete={canDelete} canManage={canManage}
+                    />
+                ))}
+            </div>
         </div>
     )
 }
