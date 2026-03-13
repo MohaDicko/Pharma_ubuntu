@@ -54,6 +54,7 @@ export async function POST(req: Request) {
         const result = await prisma.$transaction(async (tx: any) => {
             let totalAmount = 0;
 
+            // 1. Création de la transaction financière
             const transaction = await tx.transaction.create({
                 data: {
                     type: 'SALE',
@@ -67,56 +68,62 @@ export async function POST(req: Request) {
                 }
             });
 
-            for (const item of items) {
-                // 1. FIX SÉCURITÉ : Lire le prix depuis la base de données
-                const product = await tx.product.findUnique({
-                    where: { id: item.productId }
-                });
+            // 2. Optimisation : Charger tous les produits concernés d'un coup
+            const productIds = items.map(i => i.productId);
+            const dbProducts = await tx.product.findMany({
+                where: { id: { in: productIds } }
+            });
+            const productMap = new Map<string, any>(dbProducts.map((p: any) => [p.id, p]));
 
+            // 3. Optimisation : Charger TOUS les lots actifs pour ces produits d'un coup
+            const allActiveBatches = await tx.batch.findMany({
+                where: {
+                    productId: { in: productIds },
+                    quantity: { gt: 0 },
+                    expiryDate: { gt: new Date() }
+                },
+                orderBy: { expiryDate: 'asc' }
+            });
+
+            // On utilise une version modifiable des lots pour la gestion en mémoire
+            const memoryBatches = allActiveBatches.map((b: any) => ({ ...b }));
+            const stockMovementsData: any[] = [];
+
+            for (const item of items) {
+                const product = productMap.get(item.productId);
                 if (!product) {
                     throw new Error(`Produit introuvable: ${item.productId}`);
                 }
 
-                const batches = await tx.batch.findMany({
-                    where: {
-                        productId: item.productId,
-                        quantity: { gt: 0 },
-                        expiryDate: { gt: new Date() }
-                    },
-                    orderBy: { expiryDate: 'asc' }
-                });
-
+                const batches = memoryBatches.filter((b: any) => b.productId === item.productId);
                 let remainingQtyToDeduct = item.quantity;
 
                 for (const batch of batches) {
                     if (remainingQtyToDeduct <= 0) break;
+                    if (batch.quantity <= 0) continue;
 
                     const deduct = Math.min(batch.quantity, remainingQtyToDeduct);
-
-                    // 2. FIX RACE CONDITION : S'assurer que la quantité est toujours >= à ce qu'on déduit
+                    
                     const updatedBatch = await tx.batch.updateMany({
-                        where: {
-                            id: batch.id,
-                            quantity: { gte: deduct }
-                        },
+                        where: { id: batch.id, quantity: { gte: deduct } },
                         data: { quantity: { decrement: deduct } }
                     });
 
-                    // Si 0 ligne mise à jour, c'est qu'un autre processus a pris le stock dans notre dos (Race Condition)
                     if (updatedBatch.count === 0) {
-                        throw new Error(`Conflit de stock détecté pour le lot ${batch.id}. Réessayez.`);
+                        throw new Error(`Conflit de stock sur le lot ${batch.id} (${product.name}).`);
                     }
 
-                    await tx.stockMovement.create({
-                        data: {
-                            type: 'OUT',
-                            quantity: -deduct,
-                            reason: 'Vente POS',
-                            productId: item.productId,
-                            batchId: batch.id,
-                            userId: userId,
-                            transactionId: transaction.id
-                        }
+                    batch.quantity -= deduct;
+
+                    // On stocke les données du mouvement au lieu de faire un create immédiat
+                    stockMovementsData.push({
+                        type: 'OUT',
+                        quantity: -deduct,
+                        reason: 'Vente POS',
+                        productId: item.productId,
+                        batchId: batch.id,
+                        userId: userId,
+                        transactionId: transaction.id
                     });
 
                     remainingQtyToDeduct -= deduct;
@@ -126,15 +133,23 @@ export async function POST(req: Request) {
                     throw new Error(`Stock insuffisant pour le produit: ${product.name}`);
                 }
 
-                // FIX SÉCURITÉ : Utilisation du vrai prix, empêchant la faille d'injection de prix par le Frontend
                 totalAmount += item.quantity * Number(product.sellingPrice);
             }
 
+            // 4. Création groupée des mouvements de stock (Optimisation majeure)
+            if (stockMovementsData.length > 0) {
+                await tx.stockMovement.createMany({
+                    data: stockMovementsData
+                });
+            }
+
+            // 5. Mise à jour finale transaction
             await tx.transaction.update({
                 where: { id: transaction.id },
                 data: { amount: totalAmount }
             });
 
+            // 6. Log d'audit
             await createAuditLog(userId, 'CREATE_SALE', {
                 transactionId: transaction.id,
                 amount: totalAmount,
@@ -142,6 +157,9 @@ export async function POST(req: Request) {
             });
 
             return { transaction };
+        }, {
+            maxWait: 5000,
+            timeout: 30000 // 30s pour être très large sur les grosses transactions
         });
 
         return NextResponse.json({

@@ -1,0 +1,35 @@
+
+> ubuntu-clinical-pharmacy@0.1.0 test:e2e
+> npx playwright test
+
+
+Running 1 test using 1 worker
+
+[1A[2K[1/1] [chromium] › e2e\basic_flow.spec.ts:3:5 › flux de base : login et accès dashboard
+[1A[2K  1) [chromium] › e2e\basic_flow.spec.ts:3:5 › flux de base : login et accès dashboard ─────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('text=Inventaire')[22m
+
+
+      24 |
+      25 |     // 4. Navigation vers Inventaire
+    > 26 |     await page.click('text=Inventaire');
+         |                ^
+      27 |     await expect(page.locator('h1, h2')).toContainText(/Inventaire|Stocks/i);
+      28 | });
+      29 |
+        at C:\Users\tinkpad\Desktop\Mes Nouveaux Projets\Ubuntu_Pharm\e2e\basic_flow.spec.ts:26:16
+
+    Error Context: test-results\basic_flow-flux-de-base-login-et-accès-dashboard-chromium\error-context.md
+
+
+[1A[2K  1 failed
+    [chromium] › e2e\basic_flow.spec.ts:3:5 › flux de base : login et accès dashboard ──────────────
+
+[36m  Serving HTML report at http://localhost:51176. Press Ctrl+C to quit.[39m
+^C^CTerminer le programme de commandes (O/N)�? ^C
+^CTerminer le programme de commandes (O/N)�? 
