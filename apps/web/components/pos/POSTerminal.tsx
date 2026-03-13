@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "@/components/ui/toast"
 
 // ── Types ────────────────────────────────────────────────────────
-interface Product { id: string; name: string; price: number; stock: number }
+interface Product { id: string; name: string; dci: string; price: number; stock: number }
 interface CartItem extends Product { quantity: number }
 interface Insurance { id: string; name: string; percentage: number }
 type PaymentMethod = 'CASH' | 'MOBILE_MONEY' | 'CARD' | 'INSURANCE'
@@ -60,8 +60,8 @@ export default function POSTerminal() {
             const res = await fetch('/api/products')
             if (res.ok) {
                 const data = await res.json()
-                setProducts(data.map((p: { id: string; name: string; sellingPrice: number; stock: number }) => ({
-                    id: p.id, name: p.name, price: p.sellingPrice, stock: p.stock
+                setProducts(data.map((p: { id: string; name: string; dci: string; sellingPrice: number; stock: number }) => ({
+                    id: p.id, name: p.name, dci: p.dci || "", price: p.sellingPrice, stock: p.stock
                 })))
             }
         } catch (e) { console.error("Erreur chargement produits", e) }
@@ -78,9 +78,25 @@ export default function POSTerminal() {
         } catch (e) { console.error("Erreur chargement assurances", e) }
     }
 
-    const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const filteredProducts = products.filter(p => {
+        if (!searchQuery) return true;
+        const q = searchQuery.toLowerCase();
+        return p.name.toLowerCase().includes(q) || (p.dci && p.dci.toLowerCase().includes(q));
+    }).sort((a, b) => {
+        // Produits en stock en premier
+        if (a.stock > 0 && b.stock <= 0) return -1;
+        if (a.stock <= 0 && b.stock > 0) return 1;
+        // Puis tri alphabétique
+        return a.name.localeCompare(b.name);
+    }).slice(0, 50); // Limite de 50 pour la performance
+
+    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        // Idéal pour scanner de code-barre (tape "Entrée" automatiquement à la fin)
+        if (e.key === 'Enter' && filteredProducts.length === 1 && filteredProducts[0].stock > 0) {
+            addToCart(filteredProducts[0]);
+            setSearchQuery("");
+        }
+    };
 
     const addToCart = useCallback((product: Product) => {
         if (product.stock <= 0) { toast("Rupture de stock !", 'warning'); return }
@@ -183,10 +199,12 @@ export default function POSTerminal() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                     ref={searchInputRef}
-                    placeholder="Scanner ou chercher un médicament..."
-                    className="pl-10 h-12 text-base shadow-sm"
+                    placeholder="Scanner code, ou chercher DCI / nom..."
+                    className="pl-10 h-12 text-base shadow-sm focus:ring-2 focus:ring-primary"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    autoFocus
                 />
             </div>
 
@@ -217,6 +235,11 @@ export default function POSTerminal() {
                                     <div className="font-bold text-slate-800 text-sm leading-tight mb-1 line-clamp-2" title={product.name}>
                                         {product.name}
                                     </div>
+                                    {product.dci && (
+                                        <div className="text-[10px] text-slate-400 truncate mb-1" title={product.dci}>
+                                            {product.dci}
+                                        </div>
+                                    )}
                                     <div className="text-primary font-bold text-base font-mono">
                                         {product.price.toLocaleString()} <span className="text-xs font-normal">F</span>
                                     </div>
