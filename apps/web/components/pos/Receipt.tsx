@@ -143,30 +143,32 @@ export const Receipt = React.forwardRef<HTMLDivElement, ReceiptProps>(({
             </div>
 
             {/* 5. Pied de page */}
-            <div className="text-center space-y-2">
-                <p className="font-bold text-sm uppercase">MERCI DE VOTRE VISITE !</p>
+            <div className="text-center space-y-2 pt-2">
+                <p className="font-black text-sm uppercase">MERCI DE VOTRE VISITE !</p>
                 <p className="text-[10px] italic">Les médicaments ne sont ni repris ni échangés.</p>
-                <p className="text-[10px] italic">Bon rétablissement.</p>
+                <p className="text-[10px] italic font-semibold">Prompt rétablissement.</p>
 
-                {/* Code barre simulé (CSS) */}
-                <div className="mt-4 flex justify-center opacity-80">
-                    <div className="h-10 w-full max-w-[180px] flex items-end justify-center space-x-[2px] bg-transparent overflow-hidden">
-                        {/* Génération aléatoire de barres pour l'effet visuel */}
-                        {Array.from({ length: 40 }).map((_, i) => (
-                            <div
-                                key={i}
-                                className="bg-black"
-                                style={{
-                                    height: `${Math.random() > 0.5 ? '100%' : '70%'}`,
-                                    width: `${Math.random() > 0.7 ? '3px' : '1px'}`
-                                }}
-                            />
-                        ))}
+                {/* Code barre déterministe généré via l'ID transaction */}
+                <div className="mt-4 flex flex-col items-center justify-center opacity-90">
+                    <div className="h-12 w-full max-w-[50mm] flex items-end justify-center space-x-[1px] bg-transparent overflow-hidden">
+                        {Array.from(transactionId).map((char, i) => {
+                            const code = char.charCodeAt(0);
+                            return (
+                                <div
+                                    key={i}
+                                    className="bg-black"
+                                    style={{
+                                        height: `${code % 2 === 0 ? '100%' : '75%'}`,
+                                        width: `${(code % 3) + 1}px`
+                                    }}
+                                />
+                            );
+                        })}
                     </div>
+                    <p className="text-[9px] mt-1 tracking-widest font-bold">{transactionId.slice(-12).toUpperCase()}</p>
                 </div>
-                <p className="text-[8px] mt-1 tracking-widest">{transactionId.toUpperCase()}</p>
 
-                <p className="mt-3 text-[8px] text-gray-400">Propulsé par Ubuntu CPMS</p>
+                <p className="mt-3 text-[8px] text-gray-500 uppercase tracking-widest">Ubuntu CPMS • SaaS</p>
             </div>
         </div>
     );

@@ -2,3 +2,8 @@
 > api@0.1.0 build
 > nest build
 
+npm notice 
+npm notice New major version of npm available! 10.2.4 -> 11.11.1
+npm notice Changelog: <https://github.com/npm/cli/releases/tag/v11.11.1>
+npm notice Run `npm install -g npm@11.11.1` to update!
+npm notice 

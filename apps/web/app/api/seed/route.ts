@@ -22,8 +22,8 @@ const seedHandler = async (req: Request) => {
         console.log("👤 Création de l'Administrateur...");
 
         // Utiliser les variables d'environnement si disponibles, sinon défaut DEV uniquement
-        const adminEmail = process.env.ADMIN_EMAIL || "admin@ubuntu.com";
-        const adminPass = process.env.ADMIN_PASSWORD || "admin123";
+        const adminEmail = process.env.ADMIN_EMAIL || "aziz";
+        const adminPass = process.env.ADMIN_PASSWORD || "aziz";
 
         const hashedPassword = await bcrypt.hash(adminPass, 10);
 

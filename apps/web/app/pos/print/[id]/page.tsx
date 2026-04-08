@@ -42,10 +42,16 @@ export default function PrintReceiptPage() {
 
     useEffect(() => {
         if (transaction && !loading) {
+            // Fermer automatiquement la fenêtre après l'impression
+            const handleAfterPrint = () => window.close()
+            window.addEventListener('afterprint', handleAfterPrint)
+
             // Lancer l'impression automatiquement quand les données sont là
             setTimeout(() => {
                 window.print()
             }, 500)
+            
+            return () => window.removeEventListener('afterprint', handleAfterPrint)
         }
     }, [transaction, loading])
 
@@ -54,7 +60,14 @@ export default function PrintReceiptPage() {
     if (!transaction) return <div className="p-10 text-center text-red-500">Transaction introuvable.</div>
 
     return (
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 print:p-0 print:bg-white">
+        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 print:p-0 print:bg-white text-black">
+            {/* Supprimer les en-têtes et pieds de page du navigateur pour impression thermique 80mm */}
+            <style type="text/css" media="print">
+                {`
+                    @page { size: 80mm auto; margin: 0mm; }
+                    body { margin: 0px; padding: 0px; -webkit-print-color-adjust: exact; }
+                `}
+            </style>
             {/* Bouton retour (caché à l'impression) */}
             <button onClick={() => window.close()} className="fixed top-4 left-4 bg-black text-white px-4 py-2 rounded print:hidden">
                 Fermer

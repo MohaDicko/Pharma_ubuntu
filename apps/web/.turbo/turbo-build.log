@@ -4,10 +4,66 @@
 
 Environment variables loaded from .env
 Prisma schema loaded from prisma\schema.prisma
-Error: 
-EPERM: operation not permitted, unlink 'C:\Users\tinkpad\Desktop\Mes Nouveaux Projets\Ubuntu_Pharm\apps\web\node_modules\.prisma\client\query_engine-windows.dll.node'
+
+✔ Generated Prisma Client (v5.10.2) to .\node_modules\@prisma\client in 379ms
+
+Start using Prisma Client in Node.js (See: https://pris.ly/d/client)
+```
+import { PrismaClient } from '@prisma/client'
+const prisma = new PrismaClient()
+```
+or start using Prisma Client at the edge (See: https://pris.ly/d/accelerate)
+```
+import { PrismaClient } from '@prisma/client/edge'
+const prisma = new PrismaClient()
+```
+
+See other ways of importing Prisma Client: http://pris.ly/d/importing-client
+
+┌─────────────────────────────────────────────────────────────┐
+│  Deploying your app to serverless or edge functions?        │
+│  Try Prisma Accelerate for connection pooling and caching.  │
+│  https://pris.ly/cli/accelerate                             │
+└─────────────────────────────────────────────────────────────┘
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+Turbopack build encountered 1 warnings:
+[next]/internal/font/google/inter_5972bc34.module.css
+Error while requesting resource
+There was an issue establishing a connection while requesting https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap
+
+Import trace:
+  Server Component:
+    [next]/internal/font/google/inter_5972bc34.module.css
+    [next]/internal/font/google/inter_5972bc34.js
+    ./apps/web/app/layout.tsx
 
 
+
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+[next]/internal/font/google/inter_5972bc34.module.css
+next/font: error:
+Failed to fetch `Inter` from Google Fonts.
+
+Import trace:
+  Server Component:
+    [next]/internal/font/google/inter_5972bc34.module.css
+    [next]/internal/font/google/inter_5972bc34.js
+    ./apps/web/app/layout.tsx
+
+
+    at ignore-listed frames
 npm ERR! Lifecycle script `build` failed with error: 
 npm ERR! Error: command failed 
 npm ERR!   in workspace: web@0.1.0 
+npm ERR!   at location: C:\Users\tinkpad\Desktop\Mes Nouveaux Projets\Ubuntu_Pharm\apps\web 
+npm notice 
+npm notice New major version of npm available! 10.2.4 -> 11.11.1
+npm notice Changelog: <https://github.com/npm/cli/releases/tag/v11.11.1>
+npm notice Run `npm install -g npm@11.11.1` to update!
+npm notice 
