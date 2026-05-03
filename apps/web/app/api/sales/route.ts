@@ -33,7 +33,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Accès refusé: Rôle insuffisant" }, { status: 403 });
         }
 
-        const userId = session.user.id;
+        const userId = session.user.id as string;
 
         // Rate Limiting
         const isAllowed = await rateLimit(`sales-${userId}`);

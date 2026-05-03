@@ -53,7 +53,7 @@ export async function POST(req: Request) {
 
         const body = await req.json();
         const { batchId, newQuantity, reason } = body;
-        const operatorId = session.user.id;
+        const operatorId = session.user.id as string;
 
         if (!batchId || newQuantity === undefined) {
             return NextResponse.json({ error: "ID du lot et nouvelle quantité requis" }, { status: 400 });
