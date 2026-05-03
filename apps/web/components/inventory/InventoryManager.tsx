@@ -102,6 +102,16 @@ const ProductRow = memo(({ product, onEdit, onDelete, onRestock, canDelete, canM
                     </Button>
                 )}
                 {canManage && (
+                    <Button
+                        size="icon" variant="ghost"
+                        className="h-8 w-8 text-amber-500 hover:text-amber-700 hover:bg-amber-50"
+                        onClick={() => onAdjust(product)}
+                        title="Ajuster / Inventaire"
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
+                )}
+                {canManage && (
                     <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-primary hover:bg-primary/5"
                         onClick={() => onEdit(product)} title="Modifier">
                         <Edit2 className="h-4 w-4" />
@@ -182,7 +192,7 @@ ProductMobileCard.displayName = "ProductMobileCard"
 
 function ProductTable({ products, loading, onEdit, onDelete, onRestock, canDelete, canManage, onAddClick }: {
     products: Product[], loading: boolean,
-    onEdit: (p: Product) => void, onDelete: (p: Product) => void, onRestock: (p: Product) => void,
+    onEdit: (p: Product) => void, onDelete: (p: Product) => void, onRestock: (p: Product) => void, onAdjust: (p: Product) => void,
     canDelete: boolean, canManage: boolean, onAddClick?: () => void
 }) {
     if (loading) return (
@@ -227,7 +237,7 @@ function ProductTable({ products, loading, onEdit, onDelete, onRestock, canDelet
                         {products.map((p) => (
                             <ProductRow
                                 key={p.id} product={p}
-                                onEdit={onEdit} onDelete={onDelete} onRestock={onRestock}
+                                onEdit={onEdit} onDelete={onDelete} onRestock={onRestock} onAdjust={onAdjust}
                                 canDelete={canDelete} canManage={canManage}
                             />
                         ))}
@@ -288,9 +298,11 @@ export default function InventoryManager() {
     const [editForm, setEditForm] = useState({ name: "", dci: "", category: "", sellingPrice: "", minThreshold: "" })
     const [isEditing, setIsEditing] = useState(false)
 
-    // Formulaire Approvisionnement
-    const [restockForm, setRestockForm] = useState(emptyRestockForm)
-    const [isRestocking, setIsRestocking] = useState(false)
+    // Formulaire Ajustement
+    const [adjustProduct, setAdjustProduct] = useState<Product | null>(null)
+    const [productBatches, setProductBatches] = useState<any[]>([])
+    const [isAdjusting, setIsAdjusting] = useState(false)
+    const [adjustForm, setAdjustForm] = useState({ batchId: "", newQuantity: "", reason: "" })
 
     async function fetchInventory() {
         setLoading(true)
@@ -462,6 +474,52 @@ export default function InventoryManager() {
         }
     }
 
+    // ── Ouvrir l'ajustement (inventaire physique / casse) ──
+    const handleAdjustOpen = async (product: Product) => {
+        setAdjustProduct(product)
+        setAdjustForm({ batchId: "", newQuantity: "", reason: "" })
+        try {
+            // On récupère les lots détaillés pour ce produit
+            const res = await fetch(`/api/products/${product.id}/batches`)
+            if (res.ok) setProductBatches(await res.json())
+        } catch {
+            toast("Erreur chargement des lots", 'error')
+        }
+    }
+
+    // ── Sauvegarder l'ajustement ──
+    const handleAdjustSave = async () => {
+        if (!adjustForm.batchId || adjustForm.newQuantity === "") {
+            toast("Veuillez sélectionner un lot et une quantité", 'warning')
+            return
+        }
+        setIsAdjusting(true)
+        try {
+            const res = await fetch('/api/inventory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    batchId: adjustForm.batchId,
+                    newQuantity: Number(adjustForm.newQuantity),
+                    reason: adjustForm.reason,
+                    userId: user?.id
+                })
+            })
+            if (res.ok) {
+                toast("Ajustement effectué avec succès", 'success')
+                setAdjustProduct(null)
+                fetchInventory() // Rafraîchir tout car le stock global a changé
+            } else {
+                const err = await res.json()
+                toast(err.error || "Erreur lors de l'ajustement", 'error')
+            }
+        } catch {
+            toast("Erreur réseau", 'error')
+        } finally {
+            setIsAdjusting(false)
+        }
+    }
+
     // ── Supprimer ──
     const handleDeleteConfirmed = async () => {
         if (!deleteProduct) return
@@ -508,6 +566,7 @@ export default function InventoryManager() {
         onEdit: handleEditOpen,
         onDelete: setDeleteProduct,
         onRestock: handleRestockOpen,
+        onAdjust: handleAdjustOpen,
         canDelete: isAdmin,
         canManage,
     }
@@ -819,6 +878,80 @@ export default function InventoryManager() {
                         <Button onClick={handleRestockSave} disabled={isRestocking} className="bg-emerald-600 hover:bg-emerald-700 shadow-md">
                             {isRestocking ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ShoppingCart className="h-4 w-4 mr-2" />}
                             Valider l&apos;approvisionnement
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ─── Modal : Ajuster (Inventaire Physique / Casse) ─── */}
+            <Dialog open={!!adjustProduct} onOpenChange={() => setAdjustProduct(null)}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <RefreshCw className="h-5 w-5 text-amber-500" />
+                            Ajustement d'inventaire
+                        </DialogTitle>
+                        <DialogDescription>
+                            Corrigez manuellement le stock pour <strong>{adjustProduct?.name}</strong>. 
+                            Chaque ajustement sera tracé dans l'historique des mouvements.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="adj-batch">Lot à ajuster</Label>
+                            <select 
+                                id="adj-batch"
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={adjustForm.batchId}
+                                onChange={(e) => {
+                                    const batch = productBatches.find(b => b.id === e.target.value);
+                                    setAdjustForm({ ...adjustForm, batchId: e.target.value, newQuantity: batch ? String(batch.quantity) : "", reason: adjustForm.reason });
+                                }}
+                            >
+                                <option value="">Choisir un lot...</option>
+                                {productBatches.map(b => (
+                                    <option key={b.id} value={b.id}>
+                                        {b.batchNumber} (Exp: {new Date(b.expiryDate).toLocaleDateString()}) - Actuel: {b.quantity}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="adj-qty">Nouvelle quantité physique</Label>
+                            <Input 
+                                id="adj-qty" 
+                                type="number" 
+                                placeholder="La quantité réellement comptée..."
+                                value={adjustForm.newQuantity}
+                                onChange={(e) => setAdjustForm({ ...adjustForm, newQuantity: e.target.value })}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="adj-reason">Motif de l'ajustement</Label>
+                            <select 
+                                id="adj-reason"
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={adjustForm.reason}
+                                onChange={(e) => setAdjustForm({ ...adjustForm, reason: e.target.value })}
+                            >
+                                <option value="">Choisir un motif...</option>
+                                <option value="Inventaire physique de routine">Inventaire physique de routine</option>
+                                <option value="Casse / Produit endommagé">Casse / Produit endommagé</option>
+                                <option value="Péremption détectée">Péremption détectée</option>
+                                <option value="Erreur de saisie précédente">Erreur de saisie précédente</option>
+                                <option value="Autre">Autre</option>
+                            </select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setAdjustProduct(null)} disabled={isAdjusting}>Annuler</Button>
+                        <Button 
+                            onClick={handleAdjustSave} 
+                            disabled={isAdjusting || !adjustForm.batchId} 
+                            className="bg-amber-600 hover:bg-amber-700 shadow-md text-white"
+                        >
+                            {isAdjusting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                            Confirmer l'ajustement
                         </Button>
                     </DialogFooter>
                 </DialogContent>

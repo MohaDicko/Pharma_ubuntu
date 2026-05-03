@@ -110,7 +110,8 @@ export async function POST(req: Request) {
                     });
 
                     if (updatedBatch.count === 0) {
-                        throw new Error(`Conflit de stock sur le lot ${batch.id} (${product.name}).`);
+                        const currentBatch = await tx.batch.findUnique({ where: { id: batch.id } });
+                        throw new Error(`Conflit de stock critique: Le lot ${batch.batchNumber} de "${product.name}" n'a plus assez d'unités (Requis: ${deduct}, Disponible: ${currentBatch?.quantity || 0}). Veuillez actualiser votre panier.`);
                     }
 
                     batch.quantity -= deduct;

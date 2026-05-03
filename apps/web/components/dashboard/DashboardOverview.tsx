@@ -61,6 +61,7 @@ export default function DashboardOverview() {
     const { user } = useAuth()
     const [stats, setStats] = useState<DashboardStats | null>(null)
     const [reports, setReports] = useState<ReportData | null>(null)
+    const [health, setHealth] = useState<{ status: string, count: number } | null>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -73,6 +74,15 @@ export default function DashboardOverview() {
 
                 if (statsRes.ok) setStats(await statsRes.json())
                 if (reportsRes.ok) setReports(await reportsRes.json())
+                
+                // Fetch health status (Admin only)
+                if (user?.role === 'ADMIN') {
+                    const healthRes = await fetch('/api/health/inventory')
+                    if (healthRes.ok) {
+                        const healthData = await healthRes.json()
+                        setHealth({ status: healthData.status, count: healthData.inconsistenciesCount })
+                    }
+                }
             } catch (e) {
                 console.error("Dashboard data error:", e)
             } finally {
@@ -80,7 +90,7 @@ export default function DashboardOverview() {
             }
         }
         fetchData()
-    }, [])
+    }, [user])
 
     const isAdmin = user?.role === 'ADMIN'
     const isPharmacist = user?.role === 'PHARMACIST'
@@ -126,6 +136,30 @@ export default function DashboardOverview() {
                     </Link>
                 )}
             </div>
+
+            {/* 🚨 Alerte d'Intégrité Stock (ADMIN seulement) */}
+            {isAdmin && health?.status === 'UNSTABLE' && (
+                <Card className="bg-rose-600 text-white border-none rounded-3xl p-4 shadow-xl shadow-rose-200 animate-pulse">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                                <AlertTriangle className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                                <p className="font-black text-sm uppercase tracking-tight">Anomalie d'intégrité détectée</p>
+                                <p className="text-xs text-white/80 font-medium">
+                                    {health.count} produit(s) présentent une incohérence entre le stock physique et l'historique des mouvements.
+                                </p>
+                            </div>
+                        </div>
+                        <Link href="/inventory">
+                            <Button variant="secondary" size="sm" className="font-bold rounded-xl whitespace-nowrap">
+                                Réparer maintenant
+                            </Button>
+                        </Link>
+                    </div>
+                </Card>
+            )}
 
             {/* ── KPI Cards ───────────────────── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
