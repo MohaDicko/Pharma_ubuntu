@@ -197,7 +197,7 @@ const ProductMobileCard = memo(({ product, onEdit, onDelete, onRestock, onAdjust
 ))
 ProductMobileCard.displayName = "ProductMobileCard"
 
-function ProductTable({ products, loading, onEdit, onDelete, onRestock, canDelete, canManage, onAddClick }: {
+function ProductTable({ products, loading, onEdit, onDelete, onRestock, onAdjust, canDelete, canManage, onAddClick }: {
     products: Product[], loading: boolean,
     onEdit: (p: Product) => void, onDelete: (p: Product) => void, onRestock: (p: Product) => void, onAdjust: (p: Product) => void,
     canDelete: boolean, canManage: boolean, onAddClick?: () => void
