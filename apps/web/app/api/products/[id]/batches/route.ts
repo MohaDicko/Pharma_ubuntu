@@ -4,16 +4,17 @@ import { auth } from '@/lib/auth';
 
 export async function GET(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const session = await auth();
         if (!session) {
             return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
         }
 
         const productWithBatches = await prisma.product.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: {
                 batches: {
                     orderBy: { expiryDate: 'asc' }
