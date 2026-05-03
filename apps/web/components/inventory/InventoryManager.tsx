@@ -54,11 +54,12 @@ function StockBar({ stock, minThreshold }: { stock: number; minThreshold: number
 }
 
 // ─── Memoized Row ─────────────────────────────────────────────────────────
-const ProductRow = memo(({ product, onEdit, onDelete, onRestock, canDelete, canManage }: {
+const ProductRow = memo(({ product, onEdit, onDelete, onRestock, onAdjust, canDelete, canManage }: {
     product: Product,
     onEdit: (p: Product) => void,
     onDelete: (p: Product) => void,
     onRestock: (p: Product) => void,
+    onAdjust: (p: Product) => void,
     canDelete: boolean,
     canManage: boolean
 }) => (
@@ -130,11 +131,12 @@ const ProductRow = memo(({ product, onEdit, onDelete, onRestock, canDelete, canM
 ProductRow.displayName = "ProductRow"
 
 // ─── Mobile Card View ────────────────────────────────────────────────────────
-const ProductMobileCard = memo(({ product, onEdit, onDelete, onRestock, canDelete, canManage }: {
+const ProductMobileCard = memo(({ product, onEdit, onDelete, onRestock, onAdjust, canDelete, canManage }: {
     product: Product,
     onEdit: (p: Product) => void,
     onDelete: (p: Product) => void,
     onRestock: (p: Product) => void,
+    onAdjust: (p: Product) => void,
     canDelete: boolean,
     canManage: boolean
 }) => (
@@ -172,6 +174,11 @@ const ProductMobileCard = memo(({ product, onEdit, onDelete, onRestock, canDelet
                 {canManage && (
                     <Button size="icon" variant="ghost" className="h-10 w-10 text-emerald-600 bg-emerald-50 rounded-lg" onClick={() => onRestock(product)}>
                         <ShoppingCart className="h-5 w-5" />
+                    </Button>
+                )}
+                {canManage && (
+                    <Button size="icon" variant="ghost" className="h-10 w-10 text-amber-600 bg-amber-50 rounded-lg" onClick={() => onAdjust(product)} title="Ajuster">
+                        <RefreshCw className="h-5 w-5" />
                     </Button>
                 )}
                 {canManage && (
@@ -250,7 +257,7 @@ function ProductTable({ products, loading, onEdit, onDelete, onRestock, canDelet
                 {products.map((p) => (
                     <ProductMobileCard
                         key={p.id} product={p}
-                        onEdit={onEdit} onDelete={onDelete} onRestock={onRestock}
+                        onEdit={onEdit} onDelete={onDelete} onRestock={onRestock} onAdjust={onAdjust}
                         canDelete={canDelete} canManage={canManage}
                     />
                 ))}
@@ -297,6 +304,10 @@ export default function InventoryManager() {
     // Formulaire Édition (fiche produit seulement)
     const [editForm, setEditForm] = useState({ name: "", dci: "", category: "", sellingPrice: "", minThreshold: "" })
     const [isEditing, setIsEditing] = useState(false)
+
+    // Formulaire Approvisionnement
+    const [restockForm, setRestockForm] = useState(emptyRestockForm)
+    const [isRestocking, setIsRestocking] = useState(false)
 
     // Formulaire Ajustement
     const [adjustProduct, setAdjustProduct] = useState<Product | null>(null)
